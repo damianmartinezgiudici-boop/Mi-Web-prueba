@@ -279,7 +279,7 @@ function filaAgenda(a) {
     <span class="t">${hora(a.inicio)}</span>
     <span class="who">${esc(a.nombre)}${a.resultado !== 'pendiente' ? `<small>${RESULTADOS[a.resultado][0]}</small>` : ''}</span>
     ${a.pais ? `<span class="flag">${esc(a.pais)}</span>` : ''}
-    <span class="chip ${a.calificada ? 'good' : 'bad'}" title="${esc(a.capital)}">${a.calificada ? 'Calificada' : 'Sin capital'}</span>
+    <span class="chip ${a.calificada ? 'good' : 'bad'}" title="${esc(a.capital)}">${a.calificada ? 'Califica' : 'No califica'}</span>
   </${tag}>`;
 }
 
@@ -627,7 +627,7 @@ document.addEventListener('click', async (e) => {
         const msg = $('#conexion-msg');
         b.disabled = true; msg.textContent = 'Conectando…';
         try {
-          const r = a === 'activar-aviso' ? await api.activarAviso() : await api.sincronizar(45);
+          const r = a === 'activar-aviso' ? await api.activarAviso() : await api.sincronizar(45, true);
           msg.textContent = Object.values(r).join(' · ');
           if (a === 'historial') { await recargar(); modalAjustes(); $('#conexion-msg').textContent = Object.values(r).join(' · '); }
         } catch (err) { msg.textContent = 'Error: ' + err.message; }

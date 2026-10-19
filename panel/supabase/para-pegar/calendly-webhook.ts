@@ -65,13 +65,16 @@ function montos(texto: string): number[] {
   return out;
 }
 
-/** Calificada si el capital declarado alcanza el mínimo (programa + USD 500 de producto). */
+/**
+ * Calificada si el capital declarado puede alcanzar el mínimo (programa + USD 500 de producto).
+ * En un rango ("entre 1.000 y 2.000") cuenta el tope: esa persona puede llegar al mínimo.
+ */
 function capitalCalifica(respuesta: string | null | undefined, minimo: number): boolean {
   if (!respuesta) return false;
   const r = respuesta.toLowerCase();
   if (/menos de|no tengo|sin capital/.test(r)) return false;
   const ns = montos(r);
-  return ns.length > 0 && Math.min(...ns) >= minimo;
+  return ns.length > 0 && Math.max(...ns) >= minimo;
 }
 
 const PREGUNTA_CAPITAL = /capital|cu[aá]nto cont[aá]s|invertir|inversi[oó]n/i;

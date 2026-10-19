@@ -27,6 +27,8 @@ test('capital: respuestas viejas y libres', () => {
   assert.equal(capitalCalifica('tengo 1,5k', 1500), true);
   assert.equal(capitalCalifica('unos 5000 dolares', 1500), true);
   assert.equal(capitalCalifica('', 1500), false);
+  assert.equal(capitalCalifica('Puedo invertir entre $1,000 y $2,000 USD para comenzar de forma progresiva.', 1500), true);
+  assert.equal(capitalCalifica('Puedo invertir menos de $1,000 USD', 1500), false);
 });
 
 test('agenda desde Calendly', () => {

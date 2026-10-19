@@ -65,13 +65,16 @@ function montos(texto: string): number[] {
   return out;
 }
 
-/** Calificada si el capital declarado alcanza el mínimo (programa + USD 500 de producto). */
+/**
+ * Calificada si el capital declarado puede alcanzar el mínimo (programa + USD 500 de producto).
+ * En un rango ("entre 1.000 y 2.000") cuenta el tope: esa persona puede llegar al mínimo.
+ */
 function capitalCalifica(respuesta: string | null | undefined, minimo: number): boolean {
   if (!respuesta) return false;
   const r = respuesta.toLowerCase();
   if (/menos de|no tengo|sin capital/.test(r)) return false;
   const ns = montos(r);
-  return ns.length > 0 && Math.min(...ns) >= minimo;
+  return ns.length > 0 && Math.max(...ns) >= minimo;
 }
 
 const PREGUNTA_CAPITAL = /capital|cu[aá]nto cont[aá]s|invertir|inversi[oó]n/i;
@@ -169,7 +172,7 @@ async function cal(path: string, token: string) {
   return j;
 }
 
-async function sincronizarCalendly(db: ReturnType<typeof servicio>, desde: Date) {
+async function sincronizarCalendly(db: ReturnType<typeof servicio>, desde: Date, forzar = false) {
   const token = Deno.env.get('CALENDLY_TOKEN');
   if (!token) return 'Calendly sin configurar';
   const tipo = Deno.env.get('CALENDLY_EVENT_TYPE');
@@ -195,7 +198,7 @@ async function sincronizarCalendly(db: ReturnType<typeof servicio>, desde: Date)
   for (const e of eventos) {
     const id = String(e.uri).split('/').pop();
     const esperado = e.status === 'canceled' ? 'cancelada' : 'activa';
-    if (estado.get(id) === esperado) continue;
+    if (!forzar && estado.get(id) === esperado) continue;
     const inv = await cal(`${e.uri}/invitees?count=100`, token);
     const filas = inv.collection.map((i: any) => agendaDesdeCalendly(i, e, minimo));
     if (filas.length) {
@@ -245,7 +248,7 @@ Deno.serve(async (req) => {
   const resultado: Record<string, string> = {};
   for (const [nombre, tarea] of [
     ['meta', () => sincronizarMeta(db, dia(desde), dia(hoy))],
-    ['calendly', () => sincronizarCalendly(db, desde)],
+    ['calendly', () => sincronizarCalendly(db, desde, !!params.forzar)],
   ] as const) {
     try { resultado[nombre] = await tarea(); }
     catch (e) { resultado[nombre] = 'ERROR: ' + (e as Error).message; }
