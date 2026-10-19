@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Amazon Elite · Panel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0d1020; --surface:#171b2e; --surface-2:#1e2340; --line:#2a3052;
+  --ink:#f3f4fb; --ink-2:#b4b8d4; --ink-3:#7c82a8;
+  --uy:#0891b2; --ar:#8b5cf6;
+  --grad-1:linear-gradient(135deg,#c86bfa 0%,#8b5cf6 100%);
+  --grad-2:linear-gradient(135deg,#22d3ee 0%,#6366f1 100%);
+  --good:#22c55e; --warn:#f59e0b; --bad:#ef4444;
+  --r:18px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;
+  background-image:radial-gradient(circle at 0% 0%,#2b1f4d 0,transparent 40%),radial-gradient(circle at 100% 100%,#16304a 0,transparent 40%)}
+.wrap{max-width:1280px;margin:0 auto;padding:24px 16px 48px}
+header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:24px}
+.brand{font-weight:800;font-size:20px;letter-spacing:-.02em}
+.brand span{color:#c86bfa}
+.month{color:var(--ink-3);font-size:14px;margin-right:auto}
+.btn{border:0;border-radius:999px;padding:10px 16px;font:600 13px Inter,sans-serif;color:#fff;cursor:pointer;background:var(--grad-1)}
+.btn.alt{background:var(--surface-2);border:1px solid var(--line)}
+.avatar{width:36px;height:36px;border-radius:50%;background:var(--grad-2);display:grid;place-items:center;font-weight:700;font-size:13px}
+.grid{display:grid;gap:16px}
+.kpis{grid-template-columns:repeat(4,1fr)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px}
+.card h2{font-size:15px;font-weight:600;margin-bottom:4px}
+.card .sub{font-size:12px;color:var(--ink-3);margin-bottom:16px}
+.kpi{border-radius:var(--r);padding:20px;position:relative;overflow:hidden}
+.kpi.g1{background:var(--grad-1)} .kpi.g2{background:var(--grad-2)}
+.kpi.plain{background:var(--surface);border:1px solid var(--line)}
+.kpi .lbl{font-size:13px;opacity:.85}
+.kpi .val{font-size:34px;font-weight:800;letter-spacing:-.03em;margin:8px 0 4px}
+.kpi .meta{font-size:12px;opacity:.85}
+.bar{height:6px;border-radius:99px;background:rgba(255,255,255,.25);margin-top:10px;overflow:hidden}
+.bar i{display:block;height:100%;background:#fff;border-radius:99px}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 8px;border-radius:99px}
+.chip.good{background:rgba(34,197,94,.15);color:#86efac}
+.chip.warn{background:rgba(245,158,11,.15);color:#fcd34d}
+.chip.bad{background:rgba(239,68,68,.15);color:#fca5a5}
+.main{grid-template-columns:1.4fr 1fr;margin-top:16px}
+.goals{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.goal{flex:1;min-width:90px;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink);cursor:pointer;font:700 18px Inter,sans-serif;text-align:center}
+.goal small{display:block;font-size:11px;font-weight:500;color:var(--ink-3)}
+.goal.on{background:var(--grad-1);border-color:transparent}
+.goal.on small{color:#f3e8ff}
+.funnel{display:flex;flex-direction:column;gap:8px}
+.step{display:grid;grid-template-columns:150px 1fr 110px;align-items:center;gap:12px;font-size:13px}
+.step .name{color:var(--ink-2)}
+.step .track{height:30px;background:var(--surface-2);border-radius:8px;overflow:hidden}
+.step .fill{height:100%;border-radius:8px;background:var(--grad-2);transition:width .4s}
+.step .num{text-align:right;font-weight:700;font-size:15px}
+.step .num small{display:block;font-weight:500;font-size:11px;color:var(--ink-3)}
+.assume{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+.assume label{font-size:11px;color:var(--ink-3);display:block;margin-bottom:4px}
+.assume input{width:100%;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;color:var(--ink);padding:8px 10px;font:600 14px Inter,sans-serif}
+.result{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}
+.result div{background:var(--surface-2);border-radius:12px;padding:12px}
+.result b{display:block;font-size:20px;margin-top:2px}
+.result span{font-size:11px;color:var(--ink-3)}
+.side{display:flex;flex-direction:column;gap:16px}
+.list{display:flex;flex-direction:column;gap:8px}
+.row{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface-2);border-radius:12px;font-size:13px}
+.row .t{color:var(--ink-3);font-size:12px;width:76px}
+.row .who{flex:1}
+.flag{font-size:11px;font-weight:700;padding:2px 6px;border-radius:6px;border:1px solid var(--line);color:var(--ink-2)}
+.bottom{grid-template-columns:1fr 1fr 1fr;margin-top:16px}
+svg text{fill:var(--ink-3);font:11px Inter,sans-serif}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--ink-2);margin-bottom:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.lock{margin-top:16px;background:linear-gradient(135deg,rgba(200,107,250,.12),rgba(34,211,238,.08));border:1px dashed #6b4fa8}
+.lock .items{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:12px}
+.lock .items div{background:var(--surface);border-radius:12px;padding:12px;font-size:12px;color:var(--ink-3)}
+.lock .items b{display:block;color:var(--ink);font-size:18px;margin-top:4px;filter:blur(5px)}
+.demo{font-size:11px;color:var(--warn);margin-left:6px;font-weight:600}
+#tip{position:fixed;pointer-events:none;background:#0b0e1c;border:1px solid var(--line);color:var(--ink);font-size:12px;padding:8px 10px;border-radius:8px;opacity:0;transition:opacity .1s;z-index:10;white-space:nowrap}
+@media (max-width:1000px){.kpis{grid-template-columns:repeat(2,1fr)}.main,.bottom{grid-template-columns:1fr}.lock .items{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:560px){.kpis{grid-template-columns:1fr}.step{grid-template-columns:96px 1fr 76px}.assume,.result{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">AMAZON <span>ELITE</span></div>
+    <div class="month">Noviembre 2026 · Panel del equipo</div>
+    <button class="btn alt">+ Lead</button>
+    <button class="btn">+ Resultado de llamada</button>
+    <div class="avatar" title="Damián">DM</div>
+  </header>
+
+  <!-- Fila 1: KPIs del mes contra la meta elegida -->
+  <section class="grid kpis">
+    <div class="kpi g1">
+      <div class="lbl">Ventas del mes <span class="demo" style="color:#fff">EJEMPLO</span></div>
+      <div class="val" id="k-ventas">$12.400</div>
+      <div class="meta" id="k-ventas-meta">de $40.000 · 31%</div>
+      <div class="bar"><i id="k-ventas-bar" style="width:31%"></i></div>
+    </div>
+    <div class="kpi g2">
+      <div class="lbl">Agendas calificadas <span class="demo" style="color:#fff">EJEMPLO</span></div>
+      <div class="val" id="k-agendas">38</div>
+      <div class="meta" id="k-agendas-meta">de 118 · 32%</div>
+      <div class="bar"><i id="k-agendas-bar" style="width:32%"></i></div>
+    </div>
+    <div class="kpi plain">
+      <div class="lbl" style="color:var(--ink-2)">Costo por agenda calificada</div>
+      <div class="val">$52</div>
+      <div class="meta"><span class="chip good">▼ meta &lt; $60</span></div>
+    </div>
+    <div class="kpi plain">
+      <div class="lbl" style="color:var(--ink-2)">Tasa de cierre</div>
+      <div class="val">27%</div>
+      <div class="meta"><span class="chip warn">● meta 30%</span></div>
+    </div>
+  </section>
+
+  <section class="grid main">
+    <!-- Calculadora de meta: embudo inverso -->
+    <div class="card">
+      <h2>¿Qué necesitamos este mes para llegar a la meta?</h2>
+      <div class="sub">Elegí la meta. El embudo se calcula hacia atrás con los supuestos de abajo (se ajustan con los datos reales de Ramiro y Gabo).</div>
+      <div class="goals" id="goals">
+        <button class="goal" data-g="30000">$30K<small>Base</small></button>
+        <button class="goal on" data-g="40000">$40K<small>Objetivo</small></button>
+        <button class="goal" data-g="50000">$50K<small>Récord</small></button>
+      </div>
+      <div class="funnel" id="funnel"></div>
+      <div class="result" id="result"></div>
+      <div class="assume" id="assume">
+        <div><label>Ticket promedio (USD)</label><input type="number" id="a-ticket" value="1530"></div>
+        <div><label>Cierre sobre llamadas hechas (%)</label><input type="number" id="a-close" value="30"></div>
+        <div><label>Se presentan (%)</label><input type="number" id="a-show" value="75"></div>
+        <div><label>Agendas calificadas (%)</label><input type="number" id="a-qual" value="60"></div>
+        <div><label>Lead → agenda (%)</label><input type="number" id="a-conv" value="5"></div>
+        <div><label>Costo por agenda (USD)</label><input type="number" id="a-cpa" value="35"></div>
+      </div>
+    </div>
+
+    <div class="side">
+      <div class="card">
+        <h2>Próximas llamadas <span class="demo">EJEMPLO</span></h2>
+        <div class="sub">Entran solas desde Calendly</div>
+        <div class="list">
+          <div class="row"><span class="t">Hoy 18:00</span><span class="who">Lucía P.</span><span class="flag">UY</span><span class="chip good">USD 2–3K</span></div>
+          <div class="row"><span class="t">Hoy 19:30</span><span class="who">Martín G.</span><span class="flag">AR</span><span class="chip good">+ USD 3K</span></div>
+          <div class="row"><span class="t">Mañ 11:00</span><span class="who">Sofía R.</span><span class="flag">UY</span><span class="chip warn">USD 1,5–2K</span></div>
+          <div class="row"><span class="t">Mañ 17:00</span><span class="who">Diego F.</span><span class="flag">AR</span><span class="chip bad">&lt; USD 1,5K</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Equipo este mes <span class="demo">EJEMPLO</span></h2>
+        <div class="sub">Contra la meta elegida</div>
+        <div class="list">
+          <div class="row"><span class="who">Gabo · agendas calificadas</span><b id="t-gabo">38 / 118</b></div>
+          <div class="row"><span class="who">Ramiro · ventas</span><b id="t-ramiro">8 / 27</b></div>
+          <div class="row"><span class="who">Ramiro · se presentaron</span><b>29 llamadas</b></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="grid bottom">
+    <div class="card">
+      <h2>Ventas por mes (USD)</h2>
+      <div class="sub">Cash cobrado · julio a octubre</div>
+      <svg id="c-cash" viewBox="0 0 360 200" width="100%"></svg>
+    </div>
+    <div class="card">
+      <h2>Costo por agenda (USD)</h2>
+      <div class="sub">Inversión en Meta / agendas · julio a octubre</div>
+      <svg id="c-cpa" viewBox="0 0 360 200" width="100%"></svg>
+    </div>
+    <div class="card">
+      <h2>Ventas por país</h2>
+      <div class="sub">Cantidad de ventas · julio a septiembre</div>
+      <div class="legend"><span><i style="background:var(--uy)"></i>Uruguay</span><span><i style="background:var(--ar)"></i>Argentina</span></div>
+      <svg id="c-pais" viewBox="0 0 360 180" width="100%"></svg>
+    </div>
+  </section>
+
+  <section class="card lock">
+    <h2>🔒 Solo Damián</h2>
+    <div class="sub">Este bloque no existe para el resto del equipo: el servidor no les manda estos datos.</div>
+    <div class="items">
+      <div>Ganancia neta<b>$00.000</b></div>
+      <div>Margen<b>00%</b></div>
+      <div>Comisiones<b>$0.000</b></div>
+      <div>Costo por venta<b>$000</b></div>
+      <div>Ingreso por hora CEO<b>$000</b></div>
+    </div>
+  </section>
+</div>
+<div id="tip"></div>
+
+<script>
+// Datos reales jul–oct 2026
+const MESES = ['Jul','Ago','Sep','Oct'];
+const CASH = [26340, 26192, 33095, 0];
+const CPA = [21, 38, 71, 50];
+const PAIS = {Jul:[20,1], Ago:[11,6], Sep:[8,10]};
+// Avance del mes (ejemplo hasta conectar los datos en vivo)
+const ACTUAL = {ventas:12400, agendasCalif:38, cierres:8};
+
+const fmt = n => '$' + Math.round(n).toLocaleString('es-UY');
+const num = n => Math.round(n).toLocaleString('es-UY');
+const tip = document.getElementById('tip');
+function hover(el, text){
+  el.addEventListener('mousemove', e => { tip.textContent = text; tip.style.opacity = 1; tip.style.left = (e.clientX + 12) + 'px'; tip.style.top = (e.clientY + 12) + 'px'; });
+  el.addEventListener('mouseleave', () => tip.style.opacity = 0);
+}
+
+let goal = 40000;
+function calc(){
+  const v = id => +document.getElementById(id).value || 0;
+  const ticket = v('a-ticket'), close = v('a-close')/100, show = v('a-show')/100,
+        qual = v('a-qual')/100, conv = v('a-conv')/100, cpa = v('a-cpa');
+  if (!ticket || !close || !show || !qual || !conv) return;
+  const ventas = Math.ceil(goal / ticket);
+  const llamadas = Math.ceil(ventas / close);
+  const calif = Math.ceil(llamadas / show);
+  const agendas = Math.ceil(calif / qual);
+  const leads = Math.ceil(agendas / conv);
+  const steps = [
+    ['Leads (conversaciones)', leads, num(Math.ceil(leads/30)) + ' por día'],
+    ['Agendas', agendas, num(Math.ceil(agendas/4.3)) + ' por semana'],
+    ['Agendas calificadas', calif, num(Math.ceil(calif/4.3)) + ' por semana'],
+    ['Llamadas hechas', llamadas, num(Math.ceil(llamadas/4.3)) + ' por semana'],
+    ['Ventas', ventas, num(Math.ceil(ventas/4.3)) + ' por semana'],
+  ];
+  document.getElementById('funnel').innerHTML = steps.map((s,i) => {
+    const w = Math.max(4, Math.sqrt(s[1]/leads) * 100);
+    return `<div class="step"><span class="name">${s[0]}</span><div class="track"><div class="fill" style="width:${w}%"></div></div><span class="num">${num(s[1])}<small>${s[2]}</small></span></div>`;
+  }).join('');
+  const inversion = agendas * cpa;
+  document.getElementById('result').innerHTML =
+    `<div><span>Inversión en Meta</span><b>${fmt(inversion)}</b></div>` +
+    `<div><span>Por día</span><b>${fmt(inversion/30)}</b></div>` +
+    `<div><span>Retorno por dólar</span><b>${(goal/inversion).toFixed(1)}x</b></div>`;
+  // KPIs contra la meta
+  const pv = Math.min(100, ACTUAL.ventas/goal*100), pa = Math.min(100, ACTUAL.agendasCalif/calif*100);
+  document.getElementById('k-ventas').textContent = fmt(ACTUAL.ventas);
+  document.getElementById('k-ventas-meta').textContent = `de ${fmt(goal)} · ${Math.round(pv)}%`;
+  document.getElementById('k-ventas-bar').style.width = pv + '%';
+  document.getElementById('k-agendas-meta').textContent = `de ${calif} · ${Math.round(pa)}%`;
+  document.getElementById('k-agendas-bar').style.width = pa + '%';
+  document.getElementById('t-gabo').textContent = `${ACTUAL.agendasCalif} / ${calif}`;
+  document.getElementById('t-ramiro').textContent = `${ACTUAL.cierres} / ${ventas}`;
+}
+document.getElementById('goals').addEventListener('click', e => {
+  const b = e.target.closest('.goal'); if (!b) return;
+  document.querySelectorAll('.goal').forEach(x => x.classList.toggle('on', x === b));
+  goal = +b.dataset.g; calc();
+});
+document.getElementById('assume').addEventListener('input', calc);
+calc();
+
+// Gráficos (SVG simple, eje en cero, grilla tenue)
+const NS = 'http://www.w3.org/2000/svg';
+function el(tag, attrs, parent){ const n = document.createElementNS(NS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); parent.appendChild(n); return n; }
+function axis(svg, max, ticks, H, W, pad, f){
+  for (let i = 0; i <= ticks; i++){
+    const y = H - pad.b - (H - pad.t - pad.b) * i / ticks;
+    el('line', {x1:pad.l, x2:W - pad.r, y1:y, y2:y, stroke:'#2a3052', 'stroke-width':1}, svg);
+    el('text', {x:pad.l - 6, y:y + 4, 'text-anchor':'end'}, svg).textContent = f(max * i / ticks);
+  }
+}
+function bars(id, labels, series, colors, names, max, f){
+  const svg = document.getElementById(id), [W, H] = [360, +svg.getAttribute('viewBox').split(' ')[3]];
+  const pad = {l:44, r:8, t:10, b:24};
+  axis(svg, max, 4, H, W, pad, f);
+  const gw = (W - pad.l - pad.r) / labels.length, bw = Math.min(28, (gw - 16) / series.length);
+  labels.forEach((lab, i) => {
+    const x0 = pad.l + gw * i + (gw - bw * series.length - 2 * (series.length - 1)) / 2;
+    series.forEach((s, j) => {
+      const h = (H - pad.t - pad.b) * s[i] / max, x = x0 + j * (bw + 2), y = H - pad.b - h;
+      const r = Math.min(4, h);
+      const p = el('path', {d:`M${x},${H-pad.b} V${y+r} Q${x},${y} ${x+r},${y} H${x+bw-r} Q${x+bw},${y} ${x+bw},${y+r} V${H-pad.b} Z`, fill:colors[j]}, svg);
+      const hit = el('rect', {x:x - 2, y:pad.t, width:bw + 4, height:H - pad.t - pad.b, fill:'transparent'}, svg);
+      hover(hit, `${lab} · ${names[j]}: ${f(s[i])}`);
+    });
+    el('text', {x:pad.l + gw * i + gw / 2, y:H - 6, 'text-anchor':'middle'}, svg).textContent = lab;
+  });
+}
+const k = n => n >= 1000 ? '$' + Math.round(n/1000) + 'K' : '$' + Math.round(n);
+bars('c-cash', MESES, [CASH], ['#c86bfa'], ['Cash'], 40000, n => n >= 1000 ? k(n) : '$' + n);
+bars('c-pais', Object.keys(PAIS), [Object.values(PAIS).map(v=>v[0]), Object.values(PAIS).map(v=>v[1])], ['var(--uy)','var(--ar)'], ['Uruguay','Argentina'], 20, n => Math.round(n));
+
+(function line(){
+  const svg = document.getElementById('c-cpa'), W = 360, H = 200, pad = {l:44, r:16, t:16, b:24}, max = 80;
+  axis(svg, max, 4, H, W, pad, n => '$' + Math.round(n));
+  const xs = MESES.map((_, i) => pad.l + 12 + (W - pad.l - pad.r - 24) * i / (MESES.length - 1));
+  const ys = CPA.map(v => H - pad.b - (H - pad.t - pad.b) * v / max);
+  el('path', {d:xs.map((x,i) => (i ? 'L' : 'M') + x + ',' + ys[i]).join(' '), fill:'none', stroke:'#22d3ee', 'stroke-width':2}, svg);
+  xs.forEach((x, i) => {
+    el('circle', {cx:x, cy:ys[i], r:4.5, fill:'#22d3ee', stroke:'#171b2e', 'stroke-width':2}, svg);
+    el('text', {x, y:H - 6, 'text-anchor':'middle'}, svg).textContent = MESES[i];
+    const hit = el('rect', {x:x - 20, y:pad.t, width:40, height:H - pad.t - pad.b, fill:'transparent'}, svg);
+    hover(hit, `${MESES[i]}: $${CPA[i]} por agenda`);
+  });
+  el('text', {x:xs[0], y:ys[0] - 10, 'text-anchor':'middle', style:'fill:#f3f4fb;font-weight:600'}, svg).textContent = '$21';
+  el('text', {x:xs[2], y:ys[2] - 10, 'text-anchor':'middle', style:'fill:#f3f4fb;font-weight:600'}, svg).textContent = '$71';
+})();
+</script>
+</body>
+</html>
