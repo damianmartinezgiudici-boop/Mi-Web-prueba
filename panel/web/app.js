@@ -261,7 +261,9 @@ function supuesto(k, etiqueta, real) {
 function tarjetaLlamadas(r) {
   const ahora = new Date();
   const proximas = D.agendas.filter((a) => a.estado === 'activa' && new Date(a.inicio) >= ahora).slice(0, 8);
-  const paraCargar = D.agendas.filter((a) => a.estado === 'activa' && a.resultado === 'pendiente' && new Date(a.inicio) < ahora)
+  // Solo la última semana: lo anterior al panel no se le pide cargar a nadie.
+  const desde = new Date(ahora.getTime() - 7 * 86400000);
+  const paraCargar = D.agendas.filter((a) => a.estado === 'activa' && a.resultado === 'pendiente' && new Date(a.inicio) < ahora && new Date(a.inicio) >= desde)
     .sort((x, y) => y.inicio.localeCompare(x.inicio));
   const lista = tabLlamadas === 'cargar' ? paraCargar : proximas;
   return `<div class="card">
