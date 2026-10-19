@@ -100,8 +100,14 @@ function pintarLogin() {
     try {
       await api.entrar(new FormData(e.target).get('email'));
       msg.innerHTML = '<p>Listo. Revisá tu mail y tocá el link para entrar.</p>';
-    } catch {
-      msg.innerHTML = '<p class="error">Ese mail no tiene acceso. Pedile a Damián que te invite.</p>';
+    } catch (err) {
+      const m = String(err.message || '');
+      const texto = /signups? not allowed|not found|not allowed for otp/i.test(m)
+        ? 'Ese mail no tiene acceso. Pedile a Damián que te invite.'
+        : /rate limit|security purposes|after \d+ seconds/i.test(m)
+          ? 'Se pidieron muchos links seguidos. Esperá unos minutos y probá de nuevo.'
+          : `No se pudo mandar el link (${esc(m)}).`;
+      msg.innerHTML = `<p class="error">${texto}</p>`;
     }
   };
 }
