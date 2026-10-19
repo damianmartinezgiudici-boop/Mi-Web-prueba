@@ -44,7 +44,9 @@ export function capitalCalifica(respuesta: string | null | undefined, minimo: nu
   return ns.length > 0 && Math.max(...ns) >= minimo;
 }
 
-export const PREGUNTA_CAPITAL = /capital|cu[aá]nto cont[aá]s|invertir|inversi[oó]n/i;
+// "¿Cuánto estarías dispuesto a invertir…?" / "¿Con cuánto contás hoy?". Exige "cuánto" para no confundirla
+// con otras preguntas que mencionan inversiones ("probaste inversiones tradicionales…").
+export const PREGUNTA_CAPITAL = /cu[aá]nto[\s\S]*(invertir|cont[aá]s)|capital/i;
 const PREGUNTA_TELEFONO = /whats|tel[eé]fono|celular|n[uú]mero/i;
 
 type QA = { question: string; answer: string };

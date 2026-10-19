@@ -47,6 +47,19 @@ test('agenda desde Calendly', () => {
   });
 });
 
+test('agenda real: la pregunta de capital no se confunde con la de intentos previos', () => {
+  const a = agendaDesdeCalendly({
+    uri: 'x/invitees/I2', name: 'Ignacio Torre', email: 'i@x.com', status: 'active', text_reminder_number: '+54 9 11 4946-0961',
+    questions_and_answers: [
+      { question: '¿Qué te ha impedido lograrlo hasta ahora y qué intentos o métodos probaste?\n(Ej: inversiones tradicionales, intentos con otros negocios, cursos, falta de tiempo, falta de guía, etc.)', answer: 'Inversiones tradicionales, cursos, negocios inmobiliarios.' },
+      { question: 'En caso de que podamos ayudarte.  ¿Cuánto estarías dispuesto a invertir en poder crear y hacer crecer un negocio en Amazon FBA?', answer: 'Puedo invertir entre $1,000 y $2,000 USD para comenzar de forma progresiva.' },
+    ],
+  }, { uri: 'x/E2', start_time: '2026-10-19T18:30:00Z', status: 'active' }, 1500);
+  assert.equal(a.capital, 'Puedo invertir entre $1,000 y $2,000 USD para comenzar de forma progresiva.');
+  assert.equal(a.calificada, true);
+  assert.equal(a.pais, 'AR');
+});
+
 test('firma del webhook de Calendly', async () => {
   const body = '{"event":"invitee.created"}', t = 1_800_000_000;
   const v1 = createHmac('sha256', 'clave').update(`${t}.${body}`).digest('hex');
