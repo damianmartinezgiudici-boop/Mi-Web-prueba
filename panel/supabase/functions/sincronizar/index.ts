@@ -18,8 +18,8 @@ async function sincronizarMeta(db: ReturnType<typeof servicio>, desde: string, h
     fields: 'spend,actions', access_token: token,
   });
   while (url) {
-    const r = await fetch(url);
-    const j = await r.json();
+    const r: Response = await fetch(url);
+    const j: any = await r.json();
     if (!r.ok) throw new Error('Meta: ' + (j.error?.message ?? r.status));
     filas.push(...j.data.map(gastoDesdeMeta));
     url = j.paging?.next ?? null;
@@ -51,7 +51,7 @@ async function sincronizarCalendly(db: ReturnType<typeof servicio>, desde: Date)
     user: yo, min_start_time: desde.toISOString(), count: '100', sort: 'start_time:asc',
   });
   while (url) {
-    const j = await cal(url, token);
+    const j: any = await cal(url, token);
     eventos.push(...j.collection.filter((e: any) => !tipo || String(e.event_type).endsWith(tipo)));
     url = j.pagination?.next_page ?? null;
   }
@@ -76,12 +76,37 @@ async function sincronizarCalendly(db: ReturnType<typeof servicio>, desde: Date)
   return `${eventos.length} eventos de Calendly, ${n} agendas actualizadas`;
 }
 
+/** Registra el aviso (webhook) de Calendly hacia la función calendly-webhook. Si ya existe, no hace nada. */
+async function activarAvisoCalendly() {
+  const token = Deno.env.get('CALENDLY_TOKEN'), clave = Deno.env.get('CALENDLY_SIGNING_KEY');
+  if (!token || !clave) return 'Faltan CALENDLY_TOKEN o CALENDLY_SIGNING_KEY';
+  const yo = (await cal('/users/me', token)).resource;
+  const url = `${Deno.env.get('SUPABASE_URL')}/functions/v1/calendly-webhook`;
+  const existentes = await cal('/webhook_subscriptions?' + new URLSearchParams({
+    organization: yo.current_organization, user: yo.uri, scope: 'user',
+  }), token);
+  if (existentes.collection.some((w: any) => w.callback_url === url && w.state === 'active')) return 'El aviso ya estaba activo';
+  const r = await fetch(CAL + '/webhook_subscriptions', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url, events: ['invitee.created', 'invitee.canceled'], organization: yo.current_organization,
+      user: yo.uri, scope: 'user', signing_key: clave }),
+  });
+  const j = await r.json();
+  if (!r.ok) throw new Error('Calendly: ' + (j.message ?? r.status));
+  return 'Aviso de Calendly activado';
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
   const porCron = req.headers.get('x-clave') === Deno.env.get('SINCRONIZAR_CLAVE');
   if (!porCron && !(await adminQueLlama(req))) return json({ error: 'sin permiso' }, 403);
 
   const params = await req.json().catch(() => ({}));
+  if (params.accion === 'activar-aviso') {
+    try { return json({ calendly: await activarAvisoCalendly() }); }
+    catch (e) { return json({ error: (e as Error).message }, 400); }
+  }
   const dias = Math.min(Number(params.dias ?? 3), 400);
   const hoy = new Date();
   const desde = new Date(hoy.getTime() - dias * 86400000);

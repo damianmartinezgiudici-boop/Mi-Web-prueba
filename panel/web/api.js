@@ -87,4 +87,5 @@ export const borrarFila = (tabla, id) => q(sb.from(tabla).delete().eq('id', id))
 export const cambiarRol = (id, rol) => q(sb.from('perfiles').update({ rol }).eq('id', id));
 
 export const equipo = (accion, datos) => fn('equipo', { accion, ...datos });
-export const sincronizar = () => fn('sincronizar', { dias: 3 });
+export const sincronizar = (dias = 3) => fn('sincronizar', { dias });
+export const activarAviso = () => fn('sincronizar', { accion: 'activar-aviso' });

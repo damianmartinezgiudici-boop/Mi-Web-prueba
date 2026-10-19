@@ -516,7 +516,7 @@ function modalLead(id) {
 
 function modalAjustes() {
   const t = tabAjustes;
-  const tabs = [['equipo', 'Equipo'], ['metas', 'Metas y supuestos'], ['ofertas', 'Ofertas y pagos'], ['costos', 'Costos fijos 🔒']];
+  const tabs = [['equipo', 'Equipo'], ['metas', 'Metas y supuestos'], ['ofertas', 'Ofertas y pagos'], ['costos', 'Costos fijos 🔒'], ['conexiones', 'Conexiones']];
   let cuerpo = '';
   if (t === 'equipo') {
     cuerpo = `<table class="tabla"><tr><th>Nombre</th><th>Mail</th><th>Rol</th><th></th></tr>
@@ -550,6 +550,17 @@ function modalAjustes() {
         <td><input data-fila="metodos_pago" data-id="${m.id}" data-k="activo" type="checkbox" ${m.activo ? 'checked' : ''} style="width:auto"></td></tr>`).join('')}</table>
       <button class="btn alt chico" data-a="nueva-fila" data-tabla="metodos_pago" style="align-self:flex-start">+ Método</button>
       <p class="sub" style="margin:0">Los cambios se guardan solos. Si cambia la comisión de un método, los pagos ya cargados no se tocan.</p>`;
+  } else if (t === 'conexiones') {
+    const ultimaAgenda = D.agendas.length ? D.agendas.reduce((a, b) => (a.creado > b.creado ? a : b)).creado : null;
+    const ultimoGasto = D.metaGasto.length ? D.metaGasto.reduce((a, b) => (a.fecha > b.fecha ? a : b)).fecha : null;
+    cuerpo = `<div class="list">
+      <div class="row"><span class="who">Calendly<small>${ultimaAgenda ? `Última agenda recibida: ${hora(ultimaAgenda)}` : 'Todavía no entró ninguna agenda'}</small></span>
+        <button class="btn alt chico" data-a="activar-aviso">Activar aviso en vivo</button></div>
+      <div class="row"><span class="who">Meta Ads<small>${ultimoGasto ? `Gasto cargado hasta el ${fecha(ultimoGasto)}` : 'Todavía no hay gasto cargado'}</small></span>
+        <button class="btn alt chico" data-a="historial">Traer últimos 45 días</button></div>
+      </div>
+      <div id="conexion-msg" class="sub" style="margin:0"></div>
+      <p class="sub" style="margin:0">El aviso en vivo hace que cada agenda nueva o cancelada aparezca al instante. Además, cada hora se repasa Calendly y se trae el gasto de Meta.</p>`;
   } else {
     const total = D.costosFijos.filter((c) => c.activo).reduce((s, c) => s + +c.monto, 0);
     cuerpo = `<table class="tabla"><tr><th>Concepto</th><th>USD por mes</th><th></th></tr>
@@ -612,6 +623,16 @@ document.addEventListener('click', async (e) => {
         aviso('Supuestos guardados para todo el equipo'); break;
       case 'sync': b.disabled = true; aviso('Actualizando Meta y Calendly…'); await api.sincronizar(); await recargar(); aviso('Datos actualizados'); break;
       case 'ajustes': modalAjustes(); break;
+      case 'activar-aviso': case 'historial': {
+        const msg = $('#conexion-msg');
+        b.disabled = true; msg.textContent = 'Conectando…';
+        try {
+          const r = a === 'activar-aviso' ? await api.activarAviso() : await api.sincronizar(45);
+          msg.textContent = Object.values(r).join(' · ');
+          if (a === 'historial') { await recargar(); modalAjustes(); $('#conexion-msg').textContent = Object.values(r).join(' · '); }
+        } catch (err) { msg.textContent = 'Error: ' + err.message; }
+        b.disabled = false; break;
+      }
       case 'quitar':
         if (confirm(`¿Quitarle el acceso a ${nombreDe(id)}? Deja de poder entrar al instante. Lo que cargó queda guardado.`)) {
           await accionAjustes(null, () => api.equipo('quitar', { id }), 'Acceso quitado');

@@ -54,9 +54,10 @@ node --experimental-strip-types --test tests/logica.test.ts
    insert into perfiles (id, email, nombre, rol, dueno)
    select id, email, 'Damián', 'admin', true from auth.users where email = '<MAIL DE DAMIÁN>';
    ```
-3. **Funciones:** crear `calendly-webhook` (con *Verify JWT* desactivado), `sincronizar` y `equipo`.
-   El código está en `supabase/functions` y las dos primeras usan `_shared`.
-   Desde la terminal: `supabase functions deploy --no-verify-jwt calendly-webhook && supabase functions deploy sincronizar equipo`.
+3. **Funciones:** `node scripts/empaquetar.mjs` genera en `supabase/para-pegar/` una versión de un solo archivo de cada
+   función, para pegar en Edge Functions → *Deploy a new function* → *Via Editor* con el mismo nombre.
+   `calendly-webhook` y `sincronizar` van con *Verify JWT* desactivado (se validan solas por firma o clave); `equipo`, activado.
+   Con la terminal: `supabase functions deploy --no-verify-jwt calendly-webhook sincronizar && supabase functions deploy equipo`.
 4. **Secretos** (Edge Functions → Secrets):
 
    | Nombre | Valor |
@@ -69,18 +70,9 @@ node --experimental-strip-types --test tests/logica.test.ts
    | `CALENDLY_EVENT_TYPE` | `7eae1a49-37f1-4266-8360-ec8915555cc5` (llamada de auditoría) |
    | `SINCRONIZAR_CLAVE` | clave inventada para el cron |
 
-5. **Webhook de Calendly** (una vez):
-   ```bash
-   curl -X POST https://api.calendly.com/webhook_subscriptions \
-     -H "Authorization: Bearer $CALENDLY_TOKEN" -H "Content-Type: application/json" \
-     -d '{"url":"https://<PROYECTO>.supabase.co/functions/v1/calendly-webhook",
-          "events":["invitee.created","invitee.canceled"],
-          "organization":"https://api.calendly.com/organizations/7cc52666-0d60-4e15-a234-7479fa4d33b6",
-          "user":"https://api.calendly.com/users/8c66dc54-728b-4b47-8683-47fd79f112b8",
-          "scope":"user","signing_key":"<CALENDLY_SIGNING_KEY>"}'
-   ```
+5. **Webhook de Calendly:** en el panel, ⚙ Ajustes → Conexiones → *Activar aviso en vivo* (lo registra la función `sincronizar`).
 6. **Cron:** ejecutar `supabase/cron.sql` con el proyecto y la clave. Para traer el historial completo de Meta,
-   tocar una vez ↻ en el panel o llamar a `sincronizar` con `{"dias": 120}`.
+   usar ⚙ Ajustes → Conexiones → *Traer últimos 45 días*.
 7. **Web (publicado en https://panel-amazon-elite.damianmartinezgiudici.workers.dev):** completar `web/config.js` con la URL del proyecto y la clave `anon` (es pública; lo que protege
    los datos son los permisos de la base). Subir la carpeta `web/` a Cloudflare Pages.
 8. **Dominio:** en GoDaddy, crear un registro CNAME `panel` → `<proyecto>.pages.dev`, y agregar el dominio en Cloudflare Pages.

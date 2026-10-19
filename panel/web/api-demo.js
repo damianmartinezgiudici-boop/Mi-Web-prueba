@@ -146,3 +146,4 @@ export async function equipo(accion, { email, nombre, rol, id }) {
   avisar();
 }
 export async function sincronizar() { await espera(); return { meta: 'demo', calendly: 'demo' }; }
+export async function activarAviso() { await espera(); return { calendly: 'demo' }; }
