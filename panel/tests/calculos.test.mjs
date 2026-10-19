@@ -4,6 +4,7 @@ import { mesDe, mesAnterior, resumenMes, serie, embudoInverso, saldos, ganancia 
 
 const base = () => ({
   config: { comision_closer_pct: 10 },
+  perfiles: [{ id: 'ramiro', rol: 'closer' }, { id: 'pedro', rol: 'socio' }],
   agendas: [
     { id: 'a1', estado: 'activa', inicio: '2026-11-03T21:00:00Z', calificada: true, resultado: 'compro' },
     { id: 'a2', estado: 'activa', inicio: '2026-11-04T21:00:00Z', calificada: true, resultado: 'no_compro' },
@@ -68,4 +69,18 @@ test('ganancia del CEO', () => {
   const r = resumenMes(base(), '2026-11');
   const g = ganancia(r, [{ monto: 800, activo: true }, { monto: 300, activo: false }]);
   assert.equal(g.neta, 940 - 150 - 94 - 800);
+});
+
+test('reparto con el socio y sin comisión para el socio', () => {
+  const d = base();
+  d.ventas.push({ id: 'v2', fecha: '2026-11-05', precio: 2500, pais: 'AR', closer_id: 'pedro' });
+  d.pagos.push({ venta_id: 'v2', fecha: '2026-11-05', monto: 2500, neto: 2500, estado: 'recibido' });
+  const r = resumenMes(d, '2026-11');
+  assert.equal(r.comisiones.pedro, undefined);
+  assert.equal(r.totalComisiones, 94);
+  const g = ganancia(r, [], 30);
+  assert.equal(g.neta, 3440 - 150 - 94);
+  assert.equal(Math.round(g.parteSocio * 100) / 100, 958.8);
+  assert.equal(Math.round(g.tuParte * 100) / 100, 2237.2);
+  assert.equal(ganancia({ ...r, cobrado: 0 }, [], 30).parteSocio, 0);   // con pérdida no hay reparto
 });

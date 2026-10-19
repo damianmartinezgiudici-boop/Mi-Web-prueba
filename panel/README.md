@@ -12,7 +12,8 @@ cobros en cuotas, leads de WhatsApp y un bloque privado de ganancias que solo ve
 | Rol | Qué puede hacer |
 |---|---|
 | Admin | Todo: ajustes, equipo, confirmar pagos, ver ganancias |
-| Closer | Cargar resultado de llamadas, ventas y pagos (los pagos quedan "por confirmar") |
+| Socio | Lo mismo que closer y setter. No cobra comisión y no ve ganancias. Su % de la ganancia neta lo ve solo el admin |
+| Closer | Cargar resultado de llamadas, ventas y pagos (los pagos quedan "por confirmar"). Cobra comisión sobre lo que entra |
 | Setter | Cargar y actualizar sus leads |
 
 El dueño (`perfiles.dueno = true`) no puede ser desactivado ni degradado por nadie.

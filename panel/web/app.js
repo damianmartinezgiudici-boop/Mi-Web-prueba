@@ -21,7 +21,7 @@ const num = (n) => Math.round(n).toLocaleString('es-UY');
 const hoyISO = () => new Date().toLocaleDateString('en-CA', { timeZone: calc.ZONA });
 
 const esAdmin = () => D.perfil.rol === 'admin';
-const vende = () => ['admin', 'closer'].includes(D.perfil.rol);
+const vende = () => ['admin', 'socio', 'closer'].includes(D.perfil.rol);
 const nombreDe = (id) => D.perfiles.find((p) => p.id === id)?.nombre || '—';
 const ofertaDe = (id) => D.ofertas.find((o) => o.id === id);
 const metodoDe = (id) => D.metodos.find((m) => m.id === id);
@@ -29,7 +29,7 @@ const metodoDe = (id) => D.metodos.find((m) => m.id === id);
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 const nombreMes = (m) => `${MESES[+m.slice(5) - 1]} ${m.slice(0, 4)}`;
 const corto = (m) => MESES[+m.slice(5) - 1].slice(0, 3);
-const ROLES = { admin: 'Admin', closer: 'Closer', setter: 'Setter' };
+const ROLES = { admin: 'Admin', socio: 'Socio', closer: 'Closer', setter: 'Setter' };
 const RESULTADOS = {
   no_se_presento: ['No se presentó', 'No entró a la llamada'],
   no_compro: ['No compró', 'Hizo la llamada y dijo que no'],
@@ -225,7 +225,7 @@ function pintar() {
 function barraDemo() {
   const como = D.perfil.id;
   return `<div class="demo-bar">MODO DEMO · datos inventados, nada se guarda · Ver como:
-    ${['damian', 'ramiro', 'gabo'].map((id) => `<button class="${como === id ? 'on' : ''}" data-a="ver-como" data-id="${id}">${nombreDe(id)}</button>`).join('')}</div>`;
+    ${['damian', 'pedro', 'ramiro', 'gabo'].map((id) => `<button class="${como === id ? 'on' : ''}" data-a="ver-como" data-id="${id}">${nombreDe(id)}</button>`).join('')}</div>`;
 }
 
 function chipMeta(valor, meta, menorEsMejor, texto) {
@@ -281,9 +281,9 @@ function tarjetaEquipo(r, e) {
   const ventasDe = (id) => D.ventas.filter((v) => v.closer_id === id && calc.mesDe(v.fecha) === mes).length;
   return `<div class="card"><h2>Equipo este mes</h2><div class="sub">Contra la meta elegida</div><div class="list">
     ${activos.map((p) => {
-      if (p.rol === 'setter') {
-        return `<div class="row"><span class="who">${esc(p.nombre)} · leads calificados</span><b>${D.leads.filter((l) => l.setter_id === p.id && calc.mesDe(l.creado) === mes && ['calificado', 'agendado'].includes(l.estado)).length}</b></div>`;
-      }
+      const leadsFila = `<div class="row"><span class="who">${esc(p.nombre)} · leads calificados</span><b>${D.leads.filter((l) => l.setter_id === p.id && calc.mesDe(l.creado) === mes && ['calificado', 'agendado'].includes(l.estado)).length}</b></div>`;
+      if (p.rol === 'setter') return leadsFila;
+      if (p.rol === 'socio') return `<div class="row"><span class="who">${esc(p.nombre)} · ventas</span><b>${ventasDe(p.id)}</b></div>${leadsFila}`;
       const c = r.comisiones[p.id] ?? { confirmada: 0, aConfirmar: 0 };
       return `<div class="row"><span class="who">${esc(p.nombre)} · ventas</span><b>${ventasDe(p.id)}${e ? ` / ${e.ventas}` : ''}</b></div>
         <div class="row"><span class="who">${esc(p.nombre)} · comisión<small>${Number(D.config.comision_closer_pct)}% de lo que entra${c.aConfirmar ? ` · +${usd(c.aConfirmar)} por confirmar` : ''}</small></span><b>${usd(c.confirmada)}</b></div>`;
@@ -313,7 +313,7 @@ function tarjetaCobros() {
       ${vende() ? `<button class="btn alt chico" data-a="pago" data-id="${v.id}">+ Pago</button>` : ''}
     </div>`);
   }
-  return `<div class="card"><h2>Cobros</h2><div class="sub">Ramiro informa cada pago; Damián confirma que entró la plata</div>
+  return `<div class="card"><h2>Cobros</h2><div class="sub">Quien vende informa cada pago; Damián confirma que entró la plata</div>
     <div class="tabs">
       <button class="tab ${tabCobros === 'confirmar' ? 'on' : ''}" data-a="tab-cobros" data-k="confirmar">Por confirmar ${porConfirmar.length ? `<span class="badge">${porConfirmar.length}</span>` : ''}</button>
       <button class="tab ${tabCobros === 'saldos' ? 'on' : ''}" data-a="tab-cobros" data-k="saldos">Cuotas por cobrar (${conSaldo.length})</button>
@@ -337,7 +337,9 @@ function tarjetaLeads() {
 }
 
 function tarjetaCEO(r) {
-  const g = calc.ganancia(r, D.costosFijos);
+  const socioPct = Number(D.configPrivada?.socio_pct ?? 0);
+  const g = calc.ganancia(r, D.costosFijos, socioPct);
+  const socios = D.perfiles.filter((p) => p.rol === 'socio' && p.activo).map((p) => p.nombre).join(' y ') || 'Socio';
   return `<section class="card lock">
     <h2>🔒 Solo Damián</h2><div class="sub">El resto del equipo no recibe estos datos: la base de datos no se los manda.</div>
     <div class="items">
@@ -346,7 +348,11 @@ function tarjetaCEO(r) {
       <div>− Comisiones<b>${usd(g.comisiones)}</b></div>
       <div>− Costos fijos<b>${usd(g.fijos)}</b></div>
       <div>Costo por venta<b>${usd(g.costoPorVenta)}</b></div>
-      <div class="total">Ganancia neta · ${pct(g.margen)}<b>${usd(g.neta)}</b></div>
+      <div>Ganancia neta · ${pct(g.margen)}<b>${usd(g.neta)}</b></div>
+    </div>
+    <div class="items" style="margin-top:10px;grid-template-columns:1fr 1fr">
+      <div>Parte de ${esc(socios)} (${socioPct}%)<b>${usd(g.parteSocio)}</b></div>
+      <div class="total">Tu parte<b>${usd(g.tuParte)}</b></div>
     </div></section>`;
 }
 
@@ -513,9 +519,9 @@ function modalAjustes() {
       </table>
       <form id="f-invitar" style="display:contents"><h3 style="font-size:15px">Invitar a alguien</h3><div class="campos">
         <label>Nombre<input name="nombre" required></label><label>Mail<input name="email" type="email" required></label>
-        <label>Rol<select name="rol"><option value="setter">Setter</option><option value="closer">Closer</option><option value="admin">Admin</option></select></label>
+        <label>Rol<select name="rol"><option value="setter">Setter</option><option value="closer">Closer</option><option value="socio">Socio</option><option value="admin">Admin</option></select></label>
         <label>&nbsp;<button type="submit" class="btn">Mandar invitación</button></label></div><div class="error"></div></form>
-      <p class="sub" style="margin:0">Setter: carga leads. Closer: carga resultados, ventas y pagos. Admin: todo. Quien no está en esta lista no puede entrar.</p>`;
+      <p class="sub" style="margin:0">Setter: carga leads. Closer: carga resultados, ventas y pagos (cobra comisión). Socio: lo mismo que setter y closer, sin comisión y sin ver ganancias. Admin: todo. Quien no está en esta lista no puede entrar.</p>`;
   } else if (t === 'metas') {
     const c = D.config;
     const campo = (k, txt) => `<label>${txt}<input name="${k}" type="number" step="any" min="0" value="${+c[k]}"></label>`;
@@ -545,7 +551,8 @@ function modalAjustes() {
         <td><button class="btn no chico" data-a="borrar-costo" data-id="${c.id}" aria-label="Borrar">✕</button></td></tr>`).join('')}
       <tr><th>Total</th><th>${usd(total)}</th><th></th></tr></table>
       <button class="btn alt chico" data-a="nueva-fila" data-tabla="costos_fijos" style="align-self:flex-start">+ Costo</button>
-      <p class="sub" style="margin:0">Solo vos ves esto. Meta Ads y las comisiones se suman solas.</p>`;
+      <label style="max-width:260px">% de la ganancia neta para el socio<input data-a="socio-pct" type="number" min="0" max="100" step="any" value="${Number(D.configPrivada?.socio_pct ?? 0)}"></label>
+      <p class="sub" style="margin:0">Solo vos ves esto. Meta Ads y las comisiones se suman solas. Si el mes da pérdida, no hay reparto.</p>`;
   }
   abrir(`<h3>Ajustes</h3><div class="tabs">${tabs.map(([k, v]) => `<button class="tab ${t === k ? 'on' : ''}" data-a="tab-ajustes" data-k="${k}">${v}</button>`).join('')}</div>
     ${cuerpo}<div class="pie"><button class="btn alt" data-a="cerrar">Cerrar</button></div>`, { ancho: true });
@@ -624,6 +631,7 @@ document.addEventListener('input', (e) => {
 document.addEventListener('change', async (e) => {
   const t = e.target;
   try {
+    if (t.dataset.a === 'socio-pct') { await api.guardarConfigPrivada({ socio_pct: +t.value }); await recargar(); modalAjustes(); aviso('Guardado'); }
     if (t.dataset.a === 'rol') { await api.cambiarRol(t.dataset.id, t.value); await recargar(); modalAjustes(); aviso('Rol actualizado'); }
     if (t.dataset.fila) {
       const v = t.type === 'checkbox' ? t.checked : t.type === 'number' ? +t.value : t.value;

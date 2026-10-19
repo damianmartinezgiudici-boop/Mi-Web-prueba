@@ -1,7 +1,7 @@
 // Alta y baja del equipo. Solo el admin puede usarla.
 import { servicio, adminQueLlama, json, CORS } from '../_shared/supabase.ts';
 
-const ROLES = ['admin', 'closer', 'setter'];
+const ROLES = ['admin', 'socio', 'closer', 'setter'];
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });

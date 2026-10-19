@@ -39,7 +39,7 @@ export async function cargar(usuario) {
   const perfil = await q(sb.from('perfiles').select('*').eq('id', usuario.id).maybeSingle());
   if (!perfil?.activo) return { perfil: null };
   const esAdmin = perfil.rol === 'admin';
-  const [perfiles, config, ofertas, metodos, agendas, leads, ventas, pagos, metaGasto, historico, costosFijos] =
+  const [perfiles, config, ofertas, metodos, agendas, leads, ventas, pagos, metaGasto, historico, costosFijos, configPrivada] =
     await Promise.all([
       q(sb.from('perfiles').select('*').order('creado')),
       q(sb.from('config').select('*').single()),
@@ -52,8 +52,9 @@ export async function cargar(usuario) {
       q(sb.from('meta_gasto').select('*')),
       q(sb.from('historico').select('*').order('mes')),
       esAdmin ? q(sb.from('costos_fijos').select('*').order('id')) : [],
+      esAdmin ? q(sb.from('config_privada').select('*').single()) : null,
     ]);
-  return { perfil, perfiles, config, ofertas, metodos, agendas, leads, ventas, pagos, metaGasto, historico, costosFijos };
+  return { perfil, perfiles, config, ofertas, metodos, agendas, leads, ventas, pagos, metaGasto, historico, costosFijos, configPrivada };
 }
 
 /** Avisa cuando alguien del equipo carga o cambia algo. */
@@ -80,6 +81,7 @@ export const crearPago = (pago) => q(sb.from('pagos').insert(pago));
 export const revisarPago = (id, estado) => q(sb.from('pagos').update({ estado }).eq('id', id));
 
 export const guardarConfig = (cambios) => q(sb.from('config').update(cambios).eq('id', 1));
+export const guardarConfigPrivada = (cambios) => q(sb.from('config_privada').update(cambios).eq('id', 1));
 export const guardarFila = (tabla, fila) => q(fila.id ? sb.from(tabla).update(fila).eq('id', fila.id) : sb.from(tabla).insert(fila));
 export const borrarFila = (tabla, id) => q(sb.from(tabla).delete().eq('id', id));
 export const cambiarRol = (id, rol) => q(sb.from('perfiles').update({ rol }).eq('id', id));

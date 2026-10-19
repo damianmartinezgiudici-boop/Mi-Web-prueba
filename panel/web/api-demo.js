@@ -14,7 +14,9 @@ const perfiles = [
   { id: 'damian', email: 'damian@amazonelite', nombre: 'Damián', rol: 'admin', activo: true, dueno: true },
   { id: 'ramiro', email: 'ramiro@amazonelite', nombre: 'Ramiro', rol: 'closer', activo: true, dueno: false },
   { id: 'gabo', email: 'gabo@amazonelite', nombre: 'Gabo', rol: 'setter', activo: true, dueno: false },
+  { id: 'pedro', email: 'pedro@amazonelite', nombre: 'Pedro', rol: 'socio', activo: true, dueno: false },
 ];
+const configPrivada = { socio_pct: 0 };
 const config = {
   meta_base: 30000, meta_objetivo: 40000, meta_record: 50000, comision_closer_pct: 10, capital_minimo: 1500,
   sup_ticket: 1530, sup_cierre_pct: 30, sup_presentan_pct: 75, sup_calificadas_pct: 60, sup_lead_agenda_pct: 5, sup_costo_agenda: 35,
@@ -111,6 +113,7 @@ export async function cargar() {
   return structuredClone({
     perfil, perfiles, config, ofertas, metodos, agendas, leads, ventas, pagos, metaGasto, historico,
     costosFijos: perfil.rol === 'admin' ? costosFijos : [],
+    configPrivada: perfil.rol === 'admin' ? configPrivada : null,
   });
 }
 
@@ -127,6 +130,7 @@ export async function crearVenta({ venta, pago, agendaId }) {
 export async function crearPago(p) { pagos.unshift(nuevoPago({ ...p, informado_por: yo })); avisar(); }
 export async function revisarPago(id, estado) { Object.assign(pagos.find((p) => p.id === id), { estado, revisado_por: yo }); avisar(); }
 export async function guardarConfig(c) { Object.assign(config, c); avisar(); }
+export async function guardarConfigPrivada(c) { Object.assign(configPrivada, c); avisar(); }
 const TABLAS = { ofertas, metodos_pago: metodos, costos_fijos: costosFijos };
 export async function guardarFila(tabla, fila) {
   const t = TABLAS[tabla];

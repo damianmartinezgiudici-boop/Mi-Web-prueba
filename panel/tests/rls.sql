@@ -56,3 +56,20 @@ select count(*) as agendas_vistas from agendas;
 \echo '== Auditoría'
 reset role;
 select tabla, accion, count(*) from auditoria group by 1,2 order by 1,2;
+
+\echo '== PEDRO (socio)'
+insert into auth.users values ('00000000-0000-0000-0000-00000000000e','pedro@x.com');
+insert into perfiles (id,email,nombre,rol) values ('00000000-0000-0000-0000-00000000000e','pedro@x.com','Pedro','socio');
+set role authenticated; set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000e';
+insert into leads (nombre) values ('Lead de Pedro');
+insert into agendas (id,nombre,inicio) values ('x','x',now());
+update agendas set resultado='no_compro' where id='inv1';
+insert into ventas (id,cliente,precio) values ('22222222-2222-2222-2222-222222222222','Cliente Pedro',2500);
+insert into pagos (venta_id,monto,metodo_id) values ('22222222-2222-2222-2222-222222222222',2500,1);
+update pagos set estado='recibido' where venta_id='22222222-2222-2222-2222-222222222222';
+select count(*) as costos_vistos_pedro from costos_fijos;
+select count(*) as reparto_visto_pedro from config_privada;
+update config_privada set socio_pct = 99;
+reset role;
+select socio_pct as pct_sin_cambio, (select count(*) from ventas where cliente='Cliente Pedro') as ventas_pedro,
+       (select resultado from agendas where id='inv1') as resultado from config_privada;

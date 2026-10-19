@@ -5,7 +5,8 @@ create extension if not exists pgcrypto;
 
 -- ───────────────────────── Equipo y roles ─────────────────────────
 
-create type rol as enum ('admin', 'closer', 'setter');
+-- socio: hace lo mismo que closer y setter, sin ver ganancias.
+create type rol as enum ('admin', 'socio', 'closer', 'setter');
 
 create table perfiles (
   id      uuid primary key references auth.users (id) on delete cascade,
@@ -165,6 +166,12 @@ create table historico (
   agendas    int not null default 0
 );
 
+-- Solo el admin: reparto de la ganancia neta con el socio.
+create table config_privada (
+  id         int primary key default 1 check (id = 1),
+  socio_pct  numeric(5,2) not null default 0 check (socio_pct >= 0 and socio_pct <= 100)
+);
+
 -- Solo el admin: costos fijos para calcular la ganancia.
 create table costos_fijos (
   id       serial primary key,
@@ -255,7 +262,7 @@ do $$
 declare t text;
 begin
   foreach t in array array['perfiles', 'ofertas', 'metodos_pago', 'config', 'agendas', 'leads',
-                           'ventas', 'pagos', 'costos_fijos', 'historico']
+                           'ventas', 'pagos', 'costos_fijos', 'historico', 'config_privada']
   loop
     execute format('create trigger %I after insert or update or delete on %I
                     for each row execute function auditar()', t || '_auditar', t);
@@ -277,6 +284,7 @@ alter table pagos        enable row level security;
 alter table meta_gasto   enable row level security;
 alter table historico    enable row level security;
 alter table costos_fijos enable row level security;
+alter table config_privada enable row level security;
 alter table auditoria    enable row level security;
 
 -- Todo el equipo activo ve la operación; solo el admin cambia la configuración.
@@ -298,7 +306,7 @@ create policy admin on historico   for all using (es_admin()) with check (es_adm
 
 create policy leer on agendas      for select using (es_miembro());
 create policy cargar on agendas    for insert with check (es_admin());
-create policy resultado on agendas for update using (mi_rol() in ('admin', 'closer')) with check (mi_rol() in ('admin', 'closer'));
+create policy resultado on agendas for update using (mi_rol() in ('admin', 'socio', 'closer')) with check (mi_rol() in ('admin', 'socio', 'closer'));
 create policy borrar on agendas    for delete using (es_admin());
 
 create policy leer on leads        for select using (es_miembro());
@@ -307,23 +315,25 @@ create policy editar on leads      for update using (setter_id = auth.uid() or e
 create policy borrar on leads      for delete using (es_admin());
 
 create policy leer on ventas       for select using (es_miembro());
-create policy cargar on ventas     for insert with check (mi_rol() in ('admin', 'closer'));
-create policy editar on ventas     for update using (es_admin() or (mi_rol() = 'closer' and closer_id = auth.uid()))
-                                   with check (mi_rol() in ('admin', 'closer'));
+create policy cargar on ventas     for insert with check (mi_rol() in ('admin', 'socio', 'closer'));
+create policy editar on ventas     for update using (es_admin() or (mi_rol() in ('socio', 'closer') and closer_id = auth.uid()))
+                                   with check (mi_rol() in ('admin', 'socio', 'closer'));
 create policy borrar on ventas     for delete using (es_admin());
 
 create policy leer on pagos        for select using (es_miembro());
-create policy cargar on pagos      for insert with check (mi_rol() in ('admin', 'closer'));
-create policy editar on pagos      for update using (es_admin() or (mi_rol() = 'closer' and informado_por = auth.uid()))
-                                   with check (mi_rol() in ('admin', 'closer'));
+create policy cargar on pagos      for insert with check (mi_rol() in ('admin', 'socio', 'closer'));
+create policy editar on pagos      for update using (es_admin() or (mi_rol() in ('socio', 'closer') and informado_por = auth.uid()))
+                                   with check (mi_rol() in ('admin', 'socio', 'closer'));
 create policy borrar on pagos      for delete using (es_admin() or (informado_por = auth.uid() and estado = 'informado'));
 
 create policy admin on costos_fijos for all using (es_admin()) with check (es_admin());
+create policy admin on config_privada for all using (es_admin()) with check (es_admin());
 create policy admin on auditoria   for select using (es_admin());
 
 -- ───────────────────────── Datos iniciales ─────────────────────────
 
 insert into config default values;
+insert into config_privada default values;
 
 insert into ofertas (nombre, precio) values ('PRIME', 950), ('VIP', 1850), ('BLACK', 2500);
 
