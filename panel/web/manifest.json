@@ -1,0 +1,9 @@
+{
+  "name": "Amazon Elite · Panel",
+  "short_name": "AE Panel",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0d1020",
+  "theme_color": "#0d1020",
+  "icons": [{ "src": "icono.svg", "sizes": "any", "type": "image/svg+xml" }]
+}
