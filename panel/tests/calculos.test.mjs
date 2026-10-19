@@ -84,3 +84,12 @@ test('reparto con el socio y sin comisión para el socio', () => {
   assert.equal(Math.round(g.tuParte * 100) / 100, 2237.2);
   assert.equal(ganancia({ ...r, cobrado: 0 }, [], 30).parteSocio, 0);   // con pérdida no hay reparto
 });
+
+test('mes anterior al panel usa el histórico', () => {
+  const r = resumenMes(base(), '2026-09');
+  assert.equal(r.historico, true);
+  assert.equal(r.cobrado, 33095);
+  assert.equal(r.ventas, 18);
+  assert.equal(r.gasto, 5204.3);
+  assert.equal(resumenMes(base(), '2026-11').historico, false);
+});

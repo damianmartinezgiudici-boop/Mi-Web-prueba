@@ -55,7 +55,22 @@ export function resumenMes(d, mes, ahora = new Date()) {
 
   const leads = d.leads.filter((l) => mesDe(l.creado) === mes);
 
+  // Meses anteriores al panel: sin datos cargados, se muestran los del histórico.
+  const historico = !!hist && !agendas.length && !ventas.length && !pagos.length;
+  if (historico) {
+    return {
+      mes, historico, agendas: hist.agendas, calificadas: 0, hechas: 0, compraron: 0, noShow: 0, paraCargar: [],
+      cierre: null, presentan: null,
+      ventas: hist.ventas_uy + hist.ventas_ar, vendido: Number(hist.cobrado),
+      ventasPais: { UY: hist.ventas_uy, AR: hist.ventas_ar },
+      cobrado: Number(hist.cobrado), porConfirmar: 0, gasto, gastoPais: { UY: gastoPais('UY'), AR: gastoPais('AR') },
+      costoAgendaCalif: null, comisiones: {}, totalComisiones: 0,
+      leads: leads.length, leadsCalificados: 0, leadsPorSetter: {},
+    };
+  }
+
   return {
+    historico,
     mes,
     agendas: agendas.length,
     calificadas: calificadas.length,
