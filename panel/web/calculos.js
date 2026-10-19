@@ -25,6 +25,7 @@ const suma = (xs, f) => xs.reduce((t, x) => t + Number(f(x) || 0), 0);
 export function resumenMes(d, mes, ahora = new Date()) {
   const agendas = d.agendas.filter((a) => a.estado === 'activa' && mesDe(a.inicio) === mes);
   const calificadas = agendas.filter((a) => a.calificada);
+  const medio = agendas.filter((a) => a.nivel === 'medio');
   const hechas = agendas.filter((a) => HECHAS.includes(a.resultado));
   const compraron = agendas.filter((a) => a.resultado === 'compro');
   const noShow = agendas.filter((a) => a.resultado === 'no_se_presento');
@@ -59,7 +60,7 @@ export function resumenMes(d, mes, ahora = new Date()) {
   const historico = !!hist && !agendas.length && !ventas.length && !pagos.length;
   if (historico) {
     return {
-      mes, historico, agendas: hist.agendas, calificadas: 0, hechas: 0, compraron: 0, noShow: 0, paraCargar: [],
+      mes, historico, agendas: hist.agendas, calificadas: 0, medio: 0, hechas: 0, compraron: 0, noShow: 0, paraCargar: [],
       cierre: null, presentan: null,
       ventas: hist.ventas_uy + hist.ventas_ar, vendido: Number(hist.cobrado),
       ventasPais: { UY: hist.ventas_uy, AR: hist.ventas_ar },
@@ -74,6 +75,7 @@ export function resumenMes(d, mes, ahora = new Date()) {
     mes,
     agendas: agendas.length,
     calificadas: calificadas.length,
+    medio: medio.length,
     hechas: hechas.length,
     compraron: compraron.length,
     noShow: noShow.length,

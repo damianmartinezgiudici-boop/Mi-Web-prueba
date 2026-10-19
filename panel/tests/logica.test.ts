@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
-import { paisPorTelefono, capitalCalifica, agendaDesdeCalendly, firmaCalendlyValida, gastoDesdeMeta }
+import { paisPorTelefono, capitalCalifica, nivelCapital, agendaDesdeCalendly, firmaCalendlyValida, gastoDesdeMeta }
   from '../supabase/functions/_shared/logica.ts';
 
 test('país por teléfono', () => {
@@ -31,6 +31,16 @@ test('capital: respuestas viejas y libres', () => {
   assert.equal(capitalCalifica('Puedo invertir menos de $1,000 USD', 1500), false);
 });
 
+test('nivel de capital: rojo, amarillo, verde', () => {
+  assert.equal(nivelCapital('Hoy no tengo capital', 1500), 'no');
+  assert.equal(nivelCapital('', 1500), 'no');
+  assert.equal(nivelCapital('Hoy cuento con al menos $500', 1500), 'medio');
+  assert.equal(nivelCapital('Menos de USD 1.500', 1500), 'medio');
+  assert.equal(nivelCapital('Puedo invertir menos de $1,000 USD', 1500), 'medio');
+  assert.equal(nivelCapital('Puedo invertir entre $1,000 y $2,000 USD', 1500), 'califica');
+  assert.equal(nivelCapital('Más de USD 3.000', 1500), 'califica');
+});
+
 test('agenda desde Calendly', () => {
   const a = agendaDesdeCalendly({
     uri: 'https://api.calendly.com/scheduled_events/EV1/invitees/INV1',
@@ -42,7 +52,7 @@ test('agenda desde Calendly', () => {
   }, { uri: 'https://api.calendly.com/scheduled_events/EV1', start_time: '2026-11-13T21:00:00Z', status: 'active' }, 1500);
   assert.deepEqual(a, {
     id: 'INV1', evento_id: 'EV1', nombre: 'Lucía', email: 'l@x.com', telefono: '+598 99 111 222',
-    pais: 'UY', capital: 'Entre USD 2.000 y 3.000', calificada: true,
+    pais: 'UY', capital: 'Entre USD 2.000 y 3.000', nivel: 'califica', calificada: true,
     inicio: '2026-11-13T21:00:00Z', estado: 'activa',
   });
 });

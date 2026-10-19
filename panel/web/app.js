@@ -36,7 +36,9 @@ const RESULTADOS = {
   seguimiento: ['Lo piensa', 'Queda en seguimiento'],
   compro: ['Compró', 'Cargás la venta y el pago'],
 };
-const CAPITAL_LEAD = { menos_1500: 'Menos de USD 1.500', '1500_3000': 'USD 1.500–3.000', mas_3000: 'Más de USD 3.000' };
+const CAPITAL_LEAD = { sin_capital: 'Sin capital', menos_1500: 'Menos de USD 1.500', '1500_3000': 'USD 1.500–3.000', mas_3000: 'Más de USD 3.000' };
+const NIVEL = { califica: ['Califica', 'good'], medio: ['Punto medio', 'warn'], no: ['No califica', 'bad'] };
+const nivelDe = (a) => a.nivel ?? (a.calificada ? 'califica' : 'no');
 const ESTADO_LEAD = { calificado: ['Calificado', 'good'], nutrir: ['Nutrir', 'warn'], agendado: ['Agendado', 'neutro'], descartado: ['Descartado', 'bad'] };
 
 function hora(iso) {
@@ -157,7 +159,7 @@ function pintar() {
       <div class="kpi g2">
         <div class="lbl">Agendas calificadas</div>
         <div class="val">${r.calificadas}</div>
-        <div class="meta">de ${e ? e.calificadas : '—'} necesarias · ${r.agendas} agendas en total</div>
+        <div class="meta">de ${e ? e.calificadas : '—'} necesarias · ${r.medio ? `+${r.medio} punto medio · ` : ''}${r.agendas} agendas en total</div>
         <div class="bar"><i style="width:${e ? Math.min(100, (r.calificadas / e.calificadas) * 100) : 0}%"></i></div>
       </div>
       <div class="kpi plain">
@@ -277,9 +279,9 @@ function filaAgenda(a) {
   const tag = vende() ? 'button' : 'div';
   return `<${tag} class="row" ${vende() ? `data-a="resultado" data-id="${a.id}"` : ''}>
     <span class="t">${hora(a.inicio)}</span>
-    <span class="who">${esc(a.nombre)}${a.resultado !== 'pendiente' ? `<small>${RESULTADOS[a.resultado][0]}</small>` : ''}</span>
+    <span class="who">${esc(a.nombre)}<small>${a.resultado !== 'pendiente' ? `${RESULTADOS[a.resultado][0]} · ` : ''}${esc(a.capital ?? 'Capital sin dato')}</small></span>
     ${a.pais ? `<span class="flag">${esc(a.pais)}</span>` : ''}
-    <span class="chip ${a.calificada ? 'good' : 'bad'}" title="${esc(a.capital)}">${a.calificada ? 'Califica' : 'No califica'}</span>
+    <span class="chip ${NIVEL[nivelDe(a)][1]}" title="${esc(a.capital)}">${NIVEL[nivelDe(a)][0]}</span>
   </${tag}>`;
 }
 
@@ -494,7 +496,7 @@ function modalLead(id) {
       <label>Nombre<input name="nombre" required value="${esc(l.nombre ?? '')}"></label>
       <label>WhatsApp<input name="telefono" placeholder="+598…" value="${esc(l.telefono ?? '')}"></label></div>
       <label>¿Con cuánto capital cuenta?</label>
-      <div class="opciones" style="grid-template-columns:repeat(3,1fr)">${Object.entries(CAPITAL_LEAD).map(([k, t]) =>
+      <div class="opciones">${Object.entries(CAPITAL_LEAD).map(([k, t]) =>
         `<label class="opcion ${l.capital === k ? 'on' : ''}" style="flex-direction:row;align-items:center"><input type="radio" name="capital" value="${k}" ${l.capital === k ? 'checked' : ''} style="width:auto">${t}</label>`).join('')}</div>
       <label>Estado<select name="estado">${Object.entries(ESTADO_LEAD).map(([k, [t]]) => `<option value="${k}" ${l.estado === k ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
       <label>Notas<textarea name="notas" rows="2">${esc(l.notas ?? '')}</textarea></label>

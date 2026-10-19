@@ -32,20 +32,28 @@ function montos(texto: string): number[] {
   return out;
 }
 
+export type Nivel = 'califica' | 'medio' | 'no';
+
 /**
- * Calificada si el capital declarado puede alcanzar el mínimo (programa + USD 500 de producto).
- * En un rango ("entre 1.000 y 2.000") cuenta el tope: esa persona puede llegar al mínimo.
+ * Nivel de capital declarado:
+ *  - 'no': no tiene capital.
+ *  - 'medio': tiene algo pero menos del mínimo (ej. "al menos $500", "menos de USD 1.500"): puede entrar con seña.
+ *  - 'califica': puede alcanzar el mínimo (programa + USD 500 de producto). En un rango cuenta el tope.
  */
-export function capitalCalifica(respuesta: string | null | undefined, minimo: number): boolean {
-  if (!respuesta) return false;
+export function nivelCapital(respuesta: string | null | undefined, minimo: number): Nivel {
+  if (!respuesta) return 'no';
   const r = respuesta.toLowerCase();
-  if (/menos de|no tengo|sin capital/.test(r)) return false;
+  if (/no tengo|sin capital|ning[uú]n|nada/.test(r)) return 'no';
   const ns = montos(r);
-  return ns.length > 0 && Math.max(...ns) >= minimo;
+  if (!ns.length) return 'no';
+  if (/menos de/.test(r)) return 'medio';
+  return Math.max(...ns) >= minimo ? 'califica' : 'medio';
 }
 
-// "¿Cuánto estarías dispuesto a invertir…?" / "¿Con cuánto contás hoy?". Exige "cuánto" para no confundirla
-// con otras preguntas que mencionan inversiones ("probaste inversiones tradicionales…").
+export function capitalCalifica(respuesta: string | null | undefined, minimo: number): boolean {
+  return nivelCapital(respuesta, minimo) === 'califica';
+}
+
 export const PREGUNTA_CAPITAL = /cu[aá]nto[\s\S]*(invertir|cont[aá]s)|capital/i;
 const PREGUNTA_TELEFONO = /whats|tel[eé]fono|celular|n[uú]mero/i;
 
@@ -66,6 +74,7 @@ export function agendaDesdeCalendly(invitado: any, evento: any, minimo: number) 
     telefono,
     pais: paisPorTelefono(telefono),
     capital,
+    nivel: nivelCapital(capital, minimo),
     calificada: capitalCalifica(capital, minimo),
     inicio: evento.start_time,
     estado: invitado.status === 'canceled' || evento.status === 'canceled' ? 'cancelada' : 'activa',

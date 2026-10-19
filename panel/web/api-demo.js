@@ -61,13 +61,14 @@ for (let d = new Date(inicioMes); d.getMonth() === inicioMes.getMonth(); d.setDa
     const pais = azar() < 0.6 ? 'UY' : 'AR';
     const capital = elegir(CAPITAL.concat(CAPITAL.slice(0, 3)));
     const calificada = CAPITAL.indexOf(capital) < 3;
+    const nivel = calificada ? 'califica' : capital.startsWith('Menos') ? 'medio' : 'no';
     const pasada = inicio < hoy;
     let resultado = 'pendiente';
     if (pasada && azar() < 0.85) {
       const x = azar();
       resultado = x < 0.15 ? 'no_se_presento' : !calificada ? 'no_compro' : x < 0.55 ? 'compro' : x < 0.75 ? 'seguimiento' : 'no_compro';
     }
-    const a = { id: uid(), nombre: elegir(NOMBRES), telefono: pais === 'UY' ? '+598 9' : '+54 9 11', pais, capital, calificada,
+    const a = { id: uid(), nombre: elegir(NOMBRES), telefono: pais === 'UY' ? '+598 9' : '+54 9 11', pais, capital, calificada, nivel,
       inicio: inicio.toISOString(), estado: 'activa', resultado, closer_id: resultado === 'pendiente' ? null : 'ramiro', notas: '' };
     agendas.push(a);
     if (resultado === 'compro') {
@@ -85,7 +86,7 @@ for (let d = new Date(inicioMes); d.getMonth() === inicioMes.getMonth(); d.setDa
 for (let i = 0; i < 22; i++) {
   const d = new Date(inicioMes.getTime() + azar() * (hoy - inicioMes));
   leads.push({ id: uid(), nombre: elegir(NOMBRES), telefono: '', pais: azar() < 0.6 ? 'UY' : 'AR',
-    capital: elegir(['menos_1500', '1500_3000', 'mas_3000']), estado: elegir(['calificado', 'calificado', 'nutrir', 'agendado', 'descartado']),
+    capital: elegir(['sin_capital', 'menos_1500', '1500_3000', 'mas_3000']), estado: elegir(['calificado', 'calificado', 'nutrir', 'agendado', 'descartado']),
     setter_id: 'gabo', notas: '', creado: d.toISOString() });
 }
 leads.sort((a, b) => b.creado.localeCompare(a.creado));
