@@ -12,18 +12,27 @@ async function sincronizarMeta(db: ReturnType<typeof servicio>, desde: string, h
   const token = Deno.env.get('META_TOKEN'), cuenta = Deno.env.get('META_ACCOUNT_ID');
   if (!token || !cuenta) return 'Meta sin configurar';
   const filas: any[] = [];
+  // Solo campañas cuyo nombre contiene el prefijo (EVG-): el lanzamiento y otras pruebas no se mezclan.
+  const prefijo = Deno.env.get('META_PREFIJO_CAMPANAS') ?? 'EVG-';
   let url: string | null = `${META}/act_${cuenta}/insights?` + new URLSearchParams({
-    level: 'account', breakdowns: 'country', time_increment: '1', limit: '500',
+    level: 'campaign', breakdowns: 'country', time_increment: '1', limit: '500',
     time_range: JSON.stringify({ since: desde, until: hasta }),
+    filtering: JSON.stringify(prefijo ? [{ field: 'campaign.name', operator: 'CONTAIN', value: prefijo }] : []),
     fields: 'spend,actions', access_token: token,
   });
+  const porDiaPais = new Map<string, ReturnType<typeof gastoDesdeMeta>>();
   while (url) {
     const r: Response = await fetch(url);
     const j: any = await r.json();
     if (!r.ok) throw new Error('Meta: ' + (j.error?.message ?? r.status));
-    filas.push(...j.data.map(gastoDesdeMeta));
+    for (const g of j.data.map(gastoDesdeMeta)) {
+      const k = `${g.fecha}|${g.pais}`;
+      const prev = porDiaPais.get(k);
+      porDiaPais.set(k, prev ? { ...prev, gasto: prev.gasto + g.gasto, conversaciones: prev.conversaciones + g.conversaciones } : g);
+    }
     url = j.paging?.next ?? null;
   }
+  filas.push(...porDiaPais.values());
   if (filas.length) {
     const { error } = await db.from('meta_gasto').upsert(filas);
     if (error) throw error;
