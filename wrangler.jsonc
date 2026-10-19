@@ -1,0 +1,8 @@
+// Publicación en Cloudflare: sirve la carpeta del panel como sitio estático.
+{
+  "name": "panel-amazon-elite",
+  "compatibility_date": "2025-09-01",
+  "assets": {
+    "directory": "./panel/web"
+  }
+}
