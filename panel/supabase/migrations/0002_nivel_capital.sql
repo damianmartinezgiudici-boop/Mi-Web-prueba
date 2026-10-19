@@ -22,3 +22,6 @@ begin
   new.actualizado := now();
   return new;
 end $$;
+
+-- Verde desde USD 1.000 (lo de abajo, con algo de capital, es punto medio).
+update config set capital_minimo = 1000;
