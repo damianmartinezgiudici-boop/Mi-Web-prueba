@@ -93,3 +93,22 @@ test('mes anterior al panel usa el histórico', () => {
   assert.equal(r.gasto, 5204.3);
   assert.equal(resumenMes(base(), '2026-11').historico, false);
 });
+
+test('mes viejo con agendas traídas de Calendly sigue usando el cobrado y las ventas del histórico', () => {
+  const d = base();
+  d.agendas.push(
+    { id: 's1', estado: 'activa', inicio: '2026-09-10T21:00:00Z', calificada: true, resultado: 'pendiente' },
+    { id: 's2', estado: 'activa', inicio: '2026-09-11T21:00:00Z', calificada: false, resultado: 'pendiente' },
+  );
+  const r = resumenMes(d, '2026-09', new Date('2026-10-19T12:00:00Z'));
+  assert.equal(r.historico, true);
+  assert.equal(r.cobrado, 33095);
+  assert.equal(r.ventas, 18);
+  assert.deepEqual(r.ventasPais, { UY: 8, AR: 10 });
+  assert.equal(r.agendas, 2);                 // las de Calendly, con su nivel de capital
+  assert.equal(r.calificadas, 1);
+  const [sep] = serie(d, ['2026-09']);
+  assert.equal(sep.cobrado, 33095);
+  assert.equal(sep.uy, 8);
+  assert.equal(Math.round(sep.costoAgenda), 2602);
+});

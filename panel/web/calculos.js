@@ -56,24 +56,16 @@ export function resumenMes(d, mes, ahora = new Date()) {
 
   const leads = d.leads.filter((l) => mesDe(l.creado) === mes);
 
-  // Meses anteriores al panel: sin datos cargados, se muestran los del histórico.
-  const historico = !!hist && !agendas.length && !ventas.length && !pagos.length;
-  if (historico) {
-    return {
-      mes, historico, agendas: hist.agendas, calificadas: 0, medio: 0, hechas: 0, compraron: 0, noShow: 0, paraCargar: [],
-      cierre: null, presentan: null,
-      ventas: hist.ventas_uy + hist.ventas_ar, vendido: Number(hist.cobrado),
-      ventasPais: { UY: hist.ventas_uy, AR: hist.ventas_ar },
-      cobrado: Number(hist.cobrado), porConfirmar: 0, gasto, gastoPais: { UY: gastoPais('UY'), AR: gastoPais('AR') },
-      costoAgendaCalif: null, comisiones: {}, totalComisiones: 0,
-      leads: leads.length, leadsCalificados: 0, leadsPorSetter: {},
-    };
-  }
+  // Meses anteriores al panel: lo que no se cargó en vivo (cobros, ventas) sale del histórico.
+  // Las agendas pueden venir de Calendly aunque el mes sea viejo, así que se decide dato por dato.
+  const usaHistCobros = !!hist && !pagos.length;
+  const usaHistVentas = !!hist && !ventas.length;
+  const historico = usaHistCobros && usaHistVentas && mes < mesDe(ahora.toISOString());
 
   return {
     historico,
     mes,
-    agendas: agendas.length,
+    agendas: agendas.length || (hist ? Number(hist.agendas) : 0),
     calificadas: calificadas.length,
     medio: medio.length,
     hechas: hechas.length,
@@ -82,10 +74,12 @@ export function resumenMes(d, mes, ahora = new Date()) {
     paraCargar,
     cierre: hechas.length ? compraron.length / hechas.length : null,
     presentan: (hechas.length + noShow.length) ? hechas.length / (hechas.length + noShow.length) : null,
-    ventas: ventas.length,
-    vendido: suma(ventas, (v) => v.precio),
-    ventasPais: { UY: ventas.filter((v) => v.pais === 'UY').length, AR: ventas.filter((v) => v.pais === 'AR').length },
-    cobrado: suma(recibidos, (p) => p.neto),
+    ventas: usaHistVentas ? hist.ventas_uy + hist.ventas_ar : ventas.length,
+    vendido: usaHistVentas ? Number(hist.cobrado) : suma(ventas, (v) => v.precio),
+    ventasPais: usaHistVentas
+      ? { UY: hist.ventas_uy, AR: hist.ventas_ar }
+      : { UY: ventas.filter((v) => v.pais === 'UY').length, AR: ventas.filter((v) => v.pais === 'AR').length },
+    cobrado: usaHistCobros ? Number(hist.cobrado) : suma(recibidos, (p) => p.neto),
     porConfirmar: suma(informados, (p) => p.neto),
     gasto,
     gastoPais: { UY: gastoPais('UY'), AR: gastoPais('AR') },
@@ -98,16 +92,13 @@ export function resumenMes(d, mes, ahora = new Date()) {
   };
 }
 
-/** Series mensuales para los gráficos: usa los datos en vivo y, si un mes no tiene, el histórico. */
+/** Series mensuales para los gráficos (el histórico ya viene mezclado en resumenMes). */
 export function serie(d, meses) {
   return meses.map((mes) => {
     const r = resumenMes(d, mes);
-    const h = d.historico.find((x) => mesDe(x.mes) === mes);
-    const vivo = r.agendas > 0 || r.ventas > 0 || r.cobrado > 0;
-    return vivo || !h
-      ? { mes, cobrado: r.cobrado, gasto: r.gasto, agendas: r.agendas, uy: r.ventasPais.UY, ar: r.ventasPais.AR }
-      : { mes, cobrado: Number(h.cobrado), gasto: Number(h.gasto_meta), agendas: h.agendas, uy: h.ventas_uy, ar: h.ventas_ar };
-  }).map((s) => ({ ...s, costoAgenda: s.agendas ? s.gasto / s.agendas : null }));
+    return { mes, cobrado: r.cobrado, gasto: r.gasto, agendas: r.agendas, uy: r.ventasPais.UY, ar: r.ventasPais.AR,
+      costoAgenda: r.agendas ? r.gasto / r.agendas : null };
+  });
 }
 
 /** Embudo hacia atrás: cuánto hace falta de cada paso para llegar a la meta. */

@@ -148,7 +148,7 @@ function pintar() {
       <div class="yo"><span>${esc(D.perfil.nombre)} · ${ROLES[D.perfil.rol]}</span><button class="avatar" data-a="salir" title="Salir">${esc(D.perfil.nombre.slice(0, 2).toUpperCase())}</button></div>
     </header>
 
-    ${r.historico ? `<div class="card" style="margin-bottom:16px;padding:12px 20px;font-size:13px;color:var(--ink-2)">📁 ${nombreMes(mes)} es anterior al panel: se muestran los datos históricos (cobrado, ventas por país, gasto en Meta y agendas). No hay detalle de llamadas ni comisiones.</div>` : ''}
+    ${r.historico ? `<div class="card" style="margin-bottom:16px;padding:12px 20px;font-size:13px;color:var(--ink-2)">📁 ${nombreMes(mes)} es anterior al panel: el cobrado, las ventas por país y el gasto en Meta salen del histórico. Las agendas, de Calendly. No hay resultado de llamadas ni comisiones.</div>` : ''}
     <section class="grid kpis">
       <div class="kpi g1">
         <div class="lbl">Cobrado del mes</div>
