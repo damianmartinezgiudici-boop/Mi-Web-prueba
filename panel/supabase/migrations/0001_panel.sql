@@ -333,7 +333,7 @@ create policy admin on auditoria   for select using (es_admin());
 -- ───────────────────────── Datos iniciales ─────────────────────────
 
 insert into config default values;
-insert into config_privada default values;
+insert into config_privada (socio_pct) values (30);   -- Pedro: 30% de la ganancia neta
 
 insert into ofertas (nombre, precio) values ('PRIME', 950), ('VIP', 1850), ('BLACK', 2500);
 
