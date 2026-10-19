@@ -81,7 +81,7 @@ node --experimental-strip-types --test tests/logica.test.ts
    ```
 6. **Cron:** ejecutar `supabase/cron.sql` con el proyecto y la clave. Para traer el historial completo de Meta,
    tocar una vez ↻ en el panel o llamar a `sincronizar` con `{"dias": 120}`.
-7. **Web:** completar `web/config.js` con la URL del proyecto y la clave `anon` (es pública; lo que protege
+7. **Web (publicado en https://panel-amazon-elite.damianmartinezgiudici.workers.dev):** completar `web/config.js` con la URL del proyecto y la clave `anon` (es pública; lo que protege
    los datos son los permisos de la base). Subir la carpeta `web/` a Cloudflare Pages.
 8. **Dominio:** en GoDaddy, crear un registro CNAME `panel` → `<proyecto>.pages.dev`, y agregar el dominio en Cloudflare Pages.
 9. **Equipo:** desde el panel, ⚙ Ajustes → Equipo → invitar por mail con su rol.
