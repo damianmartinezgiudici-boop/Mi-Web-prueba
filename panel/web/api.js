@@ -45,7 +45,7 @@ export async function cargar(usuario) {
       q(sb.from('config').select('*').single()),
       q(sb.from('ofertas').select('*').order('precio')),
       q(sb.from('metodos_pago').select('*').order('id')),
-      q(sb.from('agendas').select('*').order('inicio')),
+      q(sb.from('agendas').select('*').eq('excluida', false).order('inicio')),
       q(sb.from('leads').select('*').order('creado', { ascending: false })),
       q(sb.from('ventas').select('*').order('fecha', { ascending: false })),
       q(sb.from('pagos').select('*').order('fecha', { ascending: false })),

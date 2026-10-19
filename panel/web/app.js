@@ -451,7 +451,7 @@ function modalResultado(id) {
       `<button class="opcion ${a.resultado === k ? 'on' : ''}" data-a="elegir-resultado" data-id="${a.id}" data-k="${k}">${t}<small>${s}</small></button>`).join('')}</div>
     <label>Notas (opcional)<textarea id="r-notas" rows="2">${esc(a.notas ?? '')}</textarea></label>
     <div class="error"></div>
-    <div class="pie"><button class="btn alt" data-a="cerrar">Cancelar</button></div>`);
+    <div class="pie">${esAdmin() ? `<button class="btn no chico" data-a="excluir" data-id="${a.id}" style="margin-right:auto">Excluir (prueba)</button>` : ''}<button class="btn alt" data-a="cerrar">Cancelar</button></div>`);
 }
 
 function modalVenta(agendaId) {
@@ -619,6 +619,10 @@ document.addEventListener('click', async (e) => {
         else { await api.guardarResultado(id, { resultado: k, notas, closer_id: D.perfil.id }); cerrar(); await recargar(); aviso('Resultado guardado'); }
         break;
       }
+      case 'excluir':
+        if (confirm('¿Excluir esta agenda del panel? Queda en Calendly pero no cuenta en ningún número.')) {
+          await api.guardarResultado(id, { excluida: true }); cerrar(); await recargar(); aviso('Agenda excluida');
+        } break;
       case 'recibido': await api.revisarPago(id, 'recibido'); await recargar(); aviso('Pago confirmado'); break;
       case 'rechazar': if (confirm('¿Marcar este pago como NO recibido?')) { await api.revisarPago(id, 'rechazado'); await recargar(); } break;
       case 'guardar-sup':

@@ -112,7 +112,7 @@ export async function cargar() {
   await espera();
   const perfil = perfiles.find((p) => p.id === yo);
   return structuredClone({
-    perfil, perfiles, config, ofertas, metodos, agendas, leads, ventas, pagos, metaGasto, historico,
+    perfil, perfiles, config, ofertas, metodos, agendas: agendas.filter((a) => !a.excluida), leads, ventas, pagos, metaGasto, historico,
     costosFijos: perfil.rol === 'admin' ? costosFijos : [],
     configPrivada: perfil.rol === 'admin' ? configPrivada : null,
   });
