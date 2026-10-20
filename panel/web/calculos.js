@@ -178,3 +178,73 @@ export function separarTelefono(tel) {
   const p = [...PAISES].sort((a, b) => b[2].length - a[2].length).find(([, , pre]) => t.startsWith(pre));
   return p ? { pais: p[0], numero: t.slice(p[2].length) } : { pais: null, numero: t.replace(/^\+/, '') };
 }
+
+// ───────────── Anuncios ─────────────
+const ultimos8 = (t) => String(t ?? '').replace(/\D/g, '').slice(-8);
+
+/**
+ * De qué anuncio vino cada agenda: por el UTM del link de Calendly (anuncios a la web) o, si no,
+ * por el lead que cargó Gabo con el mismo WhatsApp (anuncios a WhatsApp o Instagram).
+ */
+export function anunciosPorAgenda(d) {
+  const porTel = new Map();
+  for (const l of d.leads) if (l.anuncio_id && ultimos8(l.telefono).length === 8) porTel.set(ultimos8(l.telefono), l.anuncio_id);
+  const out = new Map();
+  for (const a of d.agendas) {
+    const id = a.anuncio_id || porTel.get(ultimos8(a.telefono)) || null;
+    if (id) out.set(a.id, id);
+  }
+  return out;
+}
+
+/** Cada anuncio del mes: gasto, mensajes, leads, agendas, ventas y lo que costó cada cosa. */
+export function resumenAnuncios(d, mes) {
+  const delMes = (f) => mesDe(f) === mes;
+  const filas = new Map();
+  const fila = (id) => {
+    if (!filas.has(id)) {
+      const a = (d.anuncios ?? []).find((x) => x.id === id);
+      filas.set(id, { id, nombre: a?.nombre ?? `Anuncio ${id}`, campana: a?.campana ?? null,
+        gasto: 0, conversaciones: 0, clics: 0, leads: 0, agendas: 0, calificadas: 0, ventas: 0, vendido: 0 });
+    }
+    return filas.get(id);
+  };
+  for (const m of d.metaAnuncios ?? []) {
+    if (!delMes(m.fecha)) continue;
+    const f = fila(m.anuncio_id);
+    f.gasto += Number(m.gasto); f.conversaciones += Number(m.conversaciones); f.clics += Number(m.clics);
+  }
+  for (const l of d.leads) if (l.anuncio_id && delMes(l.creado)) fila(l.anuncio_id).leads++;
+
+  const deAgenda = anunciosPorAgenda(d);
+  const agendas = d.agendas.filter((a) => a.estado === 'activa' && delMes(a.inicio));
+  let agendasConAnuncio = 0;
+  for (const a of agendas) {
+    const id = deAgenda.get(a.id);
+    if (!id) continue;
+    agendasConAnuncio++;
+    const f = fila(id); f.agendas++; if (a.calificada) f.calificadas++;
+  }
+  const ventas = d.ventas.filter((v) => delMes(v.fecha));
+  let ventasConAnuncio = 0;
+  for (const v of ventas) {
+    const id = v.agenda_id && deAgenda.get(v.agenda_id);
+    if (!id) continue;
+    ventasConAnuncio++;
+    const f = fila(id); f.ventas++; f.vendido += Number(v.precio);
+  }
+  const div = (a, b) => (b ? a / b : null);
+  const anuncios = [...filas.values()].map((f) => ({ ...f,
+    porConversacion: div(f.gasto, f.conversaciones), porAgenda: div(f.gasto, f.agendas),
+    porVenta: div(f.gasto, f.ventas), retorno: div(f.vendido, f.gasto),
+  })).sort((a, b) => b.gasto - a.gasto || b.ventas - a.ventas);
+  return { anuncios, agendas: agendas.length, agendasConAnuncio, ventas: ventas.length, ventasConAnuncio };
+}
+
+/** Qué hacer con cada anuncio. Nada se apaga sin mirar ventas: con poco gasto todavía no hay datos. */
+export function sugerencia(f, umbral) {
+  if (f.ventas && f.retorno >= 3) return 'escalar';
+  if (f.gasto < umbral * 2) return 'datos';
+  if (!f.agendas || f.porAgenda > umbral * 1.5) return 'revisar';
+  return 'mantener';
+}

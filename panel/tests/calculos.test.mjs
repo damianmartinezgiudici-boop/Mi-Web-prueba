@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mesDe, mesAnterior, resumenMes, serie, embudoInverso, saldos, ganancia, armarTelefono, separarTelefono } from '../web/calculos.js';
+import { mesDe, mesAnterior, resumenMes, serie, embudoInverso, saldos, ganancia, armarTelefono, separarTelefono, resumenAnuncios, sugerencia } from '../web/calculos.js';
 
 const base = () => ({
   config: { comision_closer_pct: 10 },
@@ -169,4 +169,33 @@ test('WhatsApp con código de país automático', () => {
   assert.deepEqual(separarTelefono('+598 99123456'), { pais: 'UY', numero: '99123456' });
   assert.deepEqual(separarTelefono('+595 981 123456'), { pais: 'PY', numero: '981123456' });
   assert.deepEqual(separarTelefono(null), { pais: null, numero: '' });
+});
+
+test('anuncios: de qué anuncio vino cada agenda y cada venta', () => {
+  const d = base();
+  d.anuncios = [{ id: '111', nombre: 'Video A', campana: 'EVG-UY' }, { id: '222', nombre: 'Web B', campana: 'EVG-Web' }];
+  d.metaAnuncios = [
+    { fecha: '2026-11-02', anuncio_id: '111', gasto: 100, conversaciones: 20, clics: 0 },
+    { fecha: '2026-11-03', anuncio_id: '111', gasto: 50, conversaciones: 10, clics: 0 },
+    { fecha: '2026-11-03', anuncio_id: '222', gasto: 30, conversaciones: 0, clics: 12 },
+    { fecha: '2026-10-30', anuncio_id: '222', gasto: 999, conversaciones: 0, clics: 0 },   // otro mes
+  ];
+  // a1 compró: llegó por WhatsApp y Gabo marcó el anuncio en el lead (se une por el WhatsApp).
+  d.agendas[0].telefono = '+598 99 123 456';
+  d.leads.push({ creado: '2026-11-01T12:00:00Z', estado: 'agendado', setter_id: 'gabo', telefono: '+598 99123456', anuncio_id: '111' });
+  d.ventas[0].agenda_id = 'a1';
+  // a2 vino de la web: el link de Calendly trajo el anuncio en el UTM.
+  d.agendas[1].anuncio_id = '222';
+  const r = resumenAnuncios(d, '2026-11');
+  const [a, b] = r.anuncios;
+  assert.equal(a.id, '111');
+  assert.deepEqual([a.gasto, a.conversaciones, a.leads, a.agendas, a.ventas, a.vendido], [150, 30, 1, 1, 1, 1850]);
+  assert.equal(a.porConversacion, 5);
+  assert.equal(Math.round(a.retorno * 100) / 100, 12.33);
+  assert.deepEqual([b.gasto, b.clics, b.agendas, b.ventas, b.porVenta], [30, 12, 1, 0, null]);
+  assert.deepEqual([r.agendas, r.agendasConAnuncio, r.ventas, r.ventasConAnuncio], [5, 2, 1, 1]);
+  assert.equal(sugerencia(a, 35), 'escalar');
+  assert.equal(sugerencia(b, 35), 'datos');
+  assert.equal(sugerencia({ ...b, gasto: 200, agendas: 0 }, 35), 'revisar');
+  assert.equal(sugerencia({ ...b, gasto: 200, agendas: 5, porAgenda: 40 }, 35), 'mantener');
 });

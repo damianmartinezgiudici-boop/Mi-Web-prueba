@@ -1,7 +1,7 @@
 // Corre cada hora (cron) o desde el botón "Actualizar" del admin.
 // Trae el gasto de Meta por país y día, y repasa las agendas de Calendly por si se perdió algún aviso.
 import { servicio, adminQueLlama, json, CORS } from '../_shared/supabase.ts';
-import { agendaDesdeCalendly, gastoDesdeMeta } from '../_shared/logica.ts';
+import { agendaDesdeCalendly, gastoDesdeMeta, anuncioDesdeMeta } from '../_shared/logica.ts';
 
 const META = 'https://graph.facebook.com/v21.0';
 const CAL = 'https://api.calendly.com';
@@ -38,6 +38,45 @@ async function sincronizarMeta(db: ReturnType<typeof servicio>, desde: string, h
     if (error) throw error;
   }
   return `${filas.length} filas de Meta`;
+}
+
+/** Gasto por anuncio y día (página "Anuncios"). Mismo filtro de campañas que el gasto general. */
+async function sincronizarAnuncios(db: ReturnType<typeof servicio>, desde: string, hasta: string) {
+  const token = Deno.env.get('META_TOKEN'), cuenta = Deno.env.get('META_ACCOUNT_ID');
+  if (!token || !cuenta) return 'Meta sin configurar';
+  const prefijo = Deno.env.get('META_PREFIJO_CAMPANAS') ?? 'EVG-';
+  let url: string | null = `${META}/act_${cuenta}/insights?` + new URLSearchParams({
+    level: 'ad', time_increment: '1', limit: '500',
+    time_range: JSON.stringify({ since: desde, until: hasta }),
+    filtering: JSON.stringify(prefijo ? [{ field: 'campaign.name', operator: 'CONTAIN', value: prefijo }] : []),
+    fields: 'ad_id,ad_name,campaign_name,spend,actions,inline_link_clicks', access_token: token,
+  });
+  const anuncios = new Map<string, any>(), dias: any[] = [];
+  while (url) {
+    const r: Response = await fetch(url);
+    const j: any = await r.json();
+    if (!r.ok) throw new Error('Meta: ' + (j.error?.message ?? r.status));
+    for (const { anuncio, dia: d } of j.data.map(anuncioDesdeMeta)) {
+      const prev = anuncios.get(anuncio.id);
+      const ultimo = d.gasto > 0 && (!prev?.ultimo_gasto || d.fecha > prev.ultimo_gasto) ? d.fecha : prev?.ultimo_gasto ?? null;
+      anuncios.set(anuncio.id, { ...anuncio, ultimo_gasto: ultimo });
+      dias.push(d);
+    }
+    url = j.paging?.next ?? null;
+  }
+  if (anuncios.size) {
+    // No pisar un último gasto más nuevo que ya estaba guardado.
+    const { data: guardados } = await db.from('anuncios').select('id, ultimo_gasto').in('id', [...anuncios.keys()]);
+    for (const g of guardados ?? []) {
+      const a = anuncios.get(g.id);
+      if (g.ultimo_gasto && (!a.ultimo_gasto || g.ultimo_gasto > a.ultimo_gasto)) a.ultimo_gasto = g.ultimo_gasto;
+    }
+    const { error } = await db.from('anuncios').upsert([...anuncios.values()]);
+    if (error) throw error;
+    const { error: e2 } = await db.from('meta_anuncios').upsert(dias);
+    if (e2) throw e2;
+  }
+  return `${anuncios.size} anuncios, ${dias.length} filas`;
 }
 
 async function cal(path: string, token: string) {
@@ -123,6 +162,7 @@ Deno.serve(async (req) => {
   const resultado: Record<string, string> = {};
   for (const [nombre, tarea] of [
     ['meta', () => sincronizarMeta(db, dia(desde), dia(hoy))],
+    ['anuncios', () => sincronizarAnuncios(db, dia(desde), dia(hoy))],
     ['calendly', () => sincronizarCalendly(db, desde, !!params.forzar)],
   ] as const) {
     try { resultado[nombre] = await tarea(); }

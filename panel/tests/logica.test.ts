@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
-import { paisPorTelefono, capitalCalifica, nivelCapital, agendaDesdeCalendly, firmaCalendlyValida, gastoDesdeMeta }
+import { paisPorTelefono, capitalCalifica, nivelCapital, agendaDesdeCalendly, firmaCalendlyValida, gastoDesdeMeta, anuncioDesdeMeta, anuncioDeUtm }
   from '../supabase/functions/_shared/logica.ts';
 
 test('país por teléfono', () => {
@@ -53,7 +53,7 @@ test('agenda desde Calendly', () => {
   assert.deepEqual(a, {
     id: 'INV1', evento_id: 'EV1', nombre: 'Lucía', email: 'l@x.com', telefono: '+598 99 111 222',
     pais: 'UY', capital: 'Entre USD 2.000 y 3.000', nivel: 'califica', calificada: true,
-    inicio: '2026-11-13T21:00:00Z', estado: 'activa',
+    inicio: '2026-11-13T21:00:00Z', estado: 'activa', anuncio_id: null,
   });
 });
 
@@ -84,4 +84,18 @@ test('gasto de Meta', () => {
   assert.deepEqual(gastoDesdeMeta({ date_start: '2026-10-01', country: 'UY', spend: '28.56',
     actions: [{ action_type: 'onsite_conversion.messaging_conversation_started_7d', value: '31' }] }),
     { fecha: '2026-10-01', pais: 'UY', gasto: 28.56, conversaciones: 31 });
+});
+
+test('anuncios: fila de Meta por anuncio y UTM de Calendly', () => {
+  const { anuncio, dia } = anuncioDesdeMeta({ ad_id: '120210000000001', ad_name: 'Video Rama', campaign_name: 'EVG-AR', date_start: '2026-11-14',
+    spend: '12.5', inline_link_clicks: '3', actions: [{ action_type: 'onsite_conversion.messaging_conversation_started_7d', value: '9' }] });
+  assert.deepEqual(anuncio, { id: '120210000000001', nombre: 'Video Rama', campana: 'EVG-AR' });
+  assert.deepEqual(dia, { fecha: '2026-11-14', anuncio_id: '120210000000001', gasto: 12.5, conversaciones: 9, clics: 3 });
+  assert.equal(anuncioDeUtm('120210000000001'), '120210000000001');
+  assert.equal(anuncioDeUtm('{{ad.id}}'), null);          // parámetro mal armado en Meta
+  assert.equal(anuncioDeUtm('historia-ig'), null);
+  assert.equal(anuncioDeUtm(undefined), null);
+  const fila = agendaDesdeCalendly({ uri: 'x/inv1', name: 'A', tracking: { utm_content: '120210000000001' } },
+    { uri: 'x/ev1', start_time: '2026-11-15T15:00:00Z', status: 'active' }, 1000);
+  assert.equal(fila.anuncio_id, '120210000000001');
 });

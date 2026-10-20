@@ -110,8 +110,15 @@ function agendaDesdeCalendly(invitado: any, evento: any, minimo: number) {
     nivel: nivelCapital(capital, minimo),
     calificada: capitalCalifica(capital, minimo),
     inicio: evento.start_time,
+    anuncio_id: anuncioDeUtm(invitado.tracking?.utm_content),
     estado: invitado.status === 'canceled' || evento.status === 'canceled' ? 'cancelada' : 'activa',
   };
+}
+
+/** El link de Calendly de los anuncios a la web lleva utm_content={{ad.id}}: solo se acepta un id de Meta. */
+function anuncioDeUtm(utm?: string | null): string | null {
+  const v = String(utm ?? '').trim();
+  return /^\d{6,25}$/.test(v) ? v : null;
 }
 
 /** Firma de los webhooks de Calendly: header "t=<ts>,v1=<hmac>" sobre "<ts>.<body>". */
@@ -141,6 +148,21 @@ function gastoDesdeMeta(fila: any) {
     pais: fila.country ?? 'OTRO',
     gasto: Number(fila.spend ?? 0),
     conversaciones: conv ? Number(conv.value) : 0,
+  };
+}
+
+/** Fila de insights de Meta a nivel anuncio y día → anuncio + fila de `meta_anuncios`. */
+function anuncioDesdeMeta(fila: any) {
+  const conv = (fila.actions ?? []).find((a: any) => a.action_type === CONVERSACION);
+  return {
+    anuncio: { id: String(fila.ad_id), nombre: fila.ad_name ?? String(fila.ad_id), campana: fila.campaign_name ?? null },
+    dia: {
+      fecha: fila.date_start,
+      anuncio_id: String(fila.ad_id),
+      gasto: Number(fila.spend ?? 0),
+      conversaciones: conv ? Number(conv.value) : 0,
+      clics: Number(fila.inline_link_clicks ?? 0),
+    },
   };
 }
 

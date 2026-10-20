@@ -12,6 +12,7 @@ let sup = null;                                  // supuestos de la calculadora 
 let tabLlamadas = 'cargar';
 let tabCobros = 'confirmar';
 let tabAjustes = 'equipo';
+let vista = 'panel';                             // 'panel' o 'anuncios'
 const TIPO_GASTO = { extra: 'Gasto extra', comision: 'Comisión' };
 
 const $ = (s, el = document) => el.querySelector(s);
@@ -23,6 +24,7 @@ const hoyISO = () => new Date().toLocaleDateString('en-CA', { timeZone: calc.ZON
 
 const esAdmin = () => D.perfil.rol === 'admin';
 const vende = () => ['admin', 'socio', 'closer'].includes(D.perfil.rol);
+const veAnuncios = () => ['admin', 'socio'].includes(D.perfil.rol);
 const nombreDe = (id) => D.perfiles.find((p) => p.id === id)?.nombre || '—';
 const ofertaDe = (id) => D.ofertas.find((o) => o.id === id);
 const metodoDe = (id) => D.metodos.find((m) => m.id === id);
@@ -40,6 +42,10 @@ const RESULTADOS = {
 const CAPITAL_LEAD = { sin_capital: 'Sin capital', menos_1500: 'Menos de USD 1.500', '1500_3000': 'USD 1.500–3.000', mas_3000: 'Más de USD 3.000' };
 const NIVEL = { califica: ['Califica', 'good'], medio: ['Punto medio', 'warn'], no: ['No califica', 'bad'] };
 const nivelDe = (a) => a.nivel ?? (a.calificada ? 'califica' : 'no');
+const CANAL = { whatsapp: 'WhatsApp', instagram: 'Instagram', web: 'Web', organico: 'Orgánico (no vino de un anuncio)' };
+const SUGERENCIA = {
+  escalar: ['Escalar', 'good'], mantener: ['Mantener', 'neutro'], revisar: ['Revisar', 'bad'], datos: ['Juntando datos', 'warn'],
+};
 const ESTADO_LEAD = { calificado: ['Calificado', 'good'], nutrir: ['Nutrir', 'warn'], agendado: ['Agendado', 'neutro'], descartado: ['Descartado', 'bad'] };
 
 function hora(iso) {
@@ -125,6 +131,7 @@ function pintarSinAcceso() {
 
 // ───────────── Pantalla principal ─────────────
 function pintar() {
+  if (vista === 'anuncios' && veAnuncios()) return pintarAnuncios();
   const r = calc.resumenMes(D, mes);
   const meta = +D.config[metaSel];
   const e = calc.embudoInverso(meta, sup);
@@ -138,16 +145,7 @@ function pintar() {
   $('#app').innerHTML = `
   ${api.demo ? barraDemo() : ''}
   <div class="wrap">
-    <header>
-      <div class="brand">AMAZON <span>ELITE</span></div>
-      <div class="mes-nav">
-        <button data-a="mes-ant" aria-label="Mes anterior">‹</button><b>${nombreMes(mes)}</b><button data-a="mes-sig" aria-label="Mes siguiente">›</button>
-      </div>
-      <button class="btn alt" data-a="lead">+ Lead</button>
-      ${vende() ? '<button class="btn" data-a="venta">+ Venta</button>' : ''}
-      ${esAdmin() ? '<button class="btn alt" data-a="sync" title="Traer ya los datos de Meta y Calendly">↻</button><button class="btn alt" data-a="ajustes">⚙ Ajustes</button>' : ''}
-      <div class="yo"><span>${esc(D.perfil.nombre)} · ${ROLES[D.perfil.rol]}</span><button class="avatar" data-a="salir" title="Salir">${esc(D.perfil.nombre.slice(0, 2).toUpperCase())}</button></div>
-    </header>
+    ${cabecera()}
 
     ${r.historico ? `<div class="card" style="margin-bottom:16px;padding:12px 20px;font-size:13px;color:var(--ink-2)">📁 ${nombreMes(mes)} es anterior al panel: el cobrado, las ventas por país y el gasto en Meta salen del histórico. Las agendas, de Calendly. No hay resultado de llamadas ni comisiones.</div>` : ''}
     <section class="grid kpis">
@@ -230,6 +228,102 @@ function pintar() {
     ${esAdmin() ? tarjetaCEO(r) : ''}
   </div>`;
   graficos();
+}
+
+function cabecera() {
+  return `<header>
+      <div class="brand">AMAZON <span>ELITE</span></div>
+      <div class="mes-nav">
+        <button data-a="mes-ant" aria-label="Mes anterior">‹</button><b>${nombreMes(mes)}</b><button data-a="mes-sig" aria-label="Mes siguiente">›</button>
+      </div>
+      ${veAnuncios() ? `<button class="btn alt" data-a="vista" data-k="${vista === 'panel' ? 'anuncios' : 'panel'}">${vista === 'panel' ? '📣 Anuncios' : '← Panel'}</button>` : ''}
+      <button class="btn alt" data-a="lead">+ Lead</button>
+      ${vende() ? '<button class="btn" data-a="venta">+ Venta</button>' : ''}
+      ${esAdmin() ? '<button class="btn alt" data-a="sync" title="Traer ya los datos de Meta y Calendly">↻</button><button class="btn alt" data-a="ajustes">⚙ Ajustes</button>' : ''}
+      <div class="yo"><span>${esc(D.perfil.nombre)} · ${ROLES[D.perfil.rol]}</span><button class="avatar" data-a="salir" title="Salir">${esc(D.perfil.nombre.slice(0, 2).toUpperCase())}</button></div>
+    </header>`;
+}
+
+// ───────────── Página de anuncios (admin y socios) ─────────────
+function pintarAnuncios() {
+  const r = calc.resumenMes(D, mes);
+  const a = calc.resumenAnuncios(D, mes);
+  const umbral = +D.config.sup_costo_agenda;
+  const conversaciones = D.metaGasto.filter((g) => calc.mesDe(g.fecha) === mes).reduce((t, g) => t + Number(g.conversaciones), 0);
+  const div = (x, y) => (y ? x / y : null);
+  const centavos = (n) => (n != null && n < 10 ? '$' + n.toFixed(2).replace('.', ',') : usd(n));
+  const veces = (n) => (n == null ? '—' : n.toFixed(1).replace('.', ',') + 'x');
+  const porAgenda = div(r.gasto, r.agendas);
+  const cobertura = div(a.agendasConAnuncio, a.agendas);
+  const aviso = D.anuncios === null
+    ? 'Falta un paso en Supabase para activar esta página (la migración 0006). Pedíselo a Claude.'
+    : !D.metaGasto.length ? 'Meta todavía no está conectado: esta página se llena sola cuando conectemos tu cuenta publicitaria.' : '';
+  $('#app').innerHTML = `
+  ${api.demo ? barraDemo() : ''}
+  <div class="wrap">
+    ${cabecera()}
+    ${aviso ? `<div class="card" style="margin-bottom:16px;padding:12px 20px;font-size:13px;color:var(--ink-2)">📣 ${aviso}</div>` : ''}
+    <section class="grid kpis">
+      <div class="kpi g1">
+        <div class="lbl">Inversión en Meta</div>
+        <div class="val">${usd(r.gasto)}</div>
+        <div class="meta">${num(conversaciones)} conversaciones · ${centavos(div(r.gasto, conversaciones))} cada una</div>
+      </div>
+      <div class="kpi plain">
+        <div class="lbl">Costo por agenda</div>
+        <div class="val">${usd(porAgenda)}</div>
+        <div class="meta">${chipMeta(porAgenda, umbral, true, `límite ${usd(umbral)}`)} · ${r.agendas} agendas · ${r.calificadas} calificadas</div>
+      </div>
+      <div class="kpi plain">
+        <div class="lbl">Costo por venta</div>
+        <div class="val">${usd(div(r.gasto, r.ventas))}</div>
+        <div class="meta">${r.ventas} ventas en el mes</div>
+      </div>
+      <div class="kpi g2">
+        <div class="lbl">Retorno</div>
+        <div class="val">${veces(div(r.vendido, r.gasto))}</div>
+        <div class="meta">${usd(r.vendido)} vendidos por cada ${usd(r.gasto)} invertidos</div>
+      </div>
+    </section>
+
+    <section class="grid dos">
+      <div class="card"><h2>Inversión y agendas por mes</h2><div class="sub">Cuánto se invirtió en Meta · pasá el mouse para ver las agendas</div><svg id="c-inv" viewBox="0 0 560 200" width="100%"></svg></div>
+      <div class="card"><h2>Costo por agenda</h2><div class="sub">La línea punteada es el límite que pusiste en los supuestos (${usd(umbral)})</div><svg id="c-cpa2" viewBox="0 0 360 200" width="100%"></svg></div>
+    </section>
+
+    <section class="card" style="margin-top:16px">
+      <h2>Los anuncios, uno por uno</h2>
+      <div class="sub">${nombreMes(mes)} · solo campañas con EVG- en el nombre. Las agendas y ventas de cada anuncio salen de lo que carga Gabo y del link de Calendly.</div>
+      ${cobertura == null ? '' : `<p style="margin:4px 0 12px;font-size:13px">${chipMeta(cobertura, 0.7, false, `sabemos de qué anuncio vino el ${pct(cobertura)} de las agendas`)}
+        <span style="color:var(--ink-3)">· ${a.agendasConAnuncio} de ${a.agendas}${cobertura < 0.7 ? ' · si es bajo, falta que Gabo marque el anuncio en cada lead' : ''}</span></p>`}
+      <div style="overflow-x:auto"><table class="tabla anuncios">
+        <tr><th>Anuncio</th><th>Gasto</th><th>Mensajes</th><th>Por mensaje</th><th>Leads</th><th>Agendas</th><th>Por agenda</th><th>Ventas</th><th>Por venta</th><th>Retorno</th><th>Sugerencia</th></tr>
+        ${a.anuncios.map((f) => {
+          const [txt, cls] = SUGERENCIA[calc.sugerencia(f, umbral)];
+          return `<tr><td><b>${esc(f.nombre)}</b><small>${esc(f.campana ?? '')}</small></td>
+            <td>${usd(f.gasto)}</td><td>${f.conversaciones ? num(f.conversaciones) : f.clics ? `${num(f.clics)} clics` : '0'}</td>
+            <td>${centavos(f.porConversacion ?? div(f.gasto, f.clics))}</td><td>${f.leads}</td>
+            <td>${f.agendas}${f.calificadas ? `<small>${f.calificadas} calif.</small>` : ''}</td><td>${usd(f.porAgenda)}</td>
+            <td>${f.ventas}</td><td>${usd(f.porVenta)}</td><td>${veces(f.retorno)}</td>
+            <td><span class="chip ${cls}">${txt}</span></td></tr>`;
+        }).join('') || '<tr><td colspan="11" class="vacio">Todavía no hay gasto por anuncio este mes.</td></tr>'}
+      </table></div>
+      <p class="sub" style="margin:12px 0 0">Sugerencia: <b>Escalar</b> si vendió y devuelve 3x o más. <b>Juntando datos</b> si gastó menos de 2 veces el límite por agenda.
+        <b>Revisar</b> si ya gastó y no trae agendas o cada agenda sale 50% más cara que el límite. Nada se apaga sin mirar antes las ventas.</p>
+    </section>
+  </div>`;
+  graficosAnuncios();
+}
+
+function graficosAnuncios() {
+  const meses = [];
+  for (let i = 5; i >= 0; i--) { const m = calc.mesAnterior(mes, i); if (m >= '2026-07') meses.push(m); }
+  const s = calc.serie(D, meses);
+  const k = (n) => (n >= 1000 ? '$' + (n / 1000).toFixed(1).replace('.0', '') + 'K' : '$' + Math.round(n));
+  barras($('#c-inv'), meses.map(corto), [s.map((x) => x.gasto)], ['#22d3ee'], ['Inversión'], k,
+    { tip: (i) => `${s[i].agendas} agendas` });
+  barras($('#c-cpa2'), meses.map(corto), [s.map((x) => x.costoAgenda ?? 0)], ['#8b5cf6'], ['Por agenda'], (n) => '$' + Math.round(n),
+    { umbral: +D.config.sup_costo_agenda });
 }
 
 function barraDemo() {
@@ -386,9 +480,9 @@ function ejes(svg, max, H, W, pad, f) {
     el('text', { x: pad.l - 6, y: y + 4, 'text-anchor': 'end' }, svg).textContent = f(max * i / 4);
   }
 }
-function barras(svg, etiquetas, series, colores, nombres, f) {
-  const W = 360, H = +svg.getAttribute('viewBox').split(' ')[3], pad = { l: 44, r: 8, t: 10, b: 24 };
-  const max = tope(Math.max(...series.flat()));
+function barras(svg, etiquetas, series, colores, nombres, f, { umbral = 0, tip: extra } = {}) {
+  const [, , W, H] = svg.getAttribute('viewBox').split(' ').map(Number), pad = { l: 44, r: 8, t: 10, b: 24 };
+  const max = tope(Math.max(...series.flat(), umbral * 1.1));
   ejes(svg, max, H, W, pad, f);
   const gw = (W - pad.l - pad.r) / etiquetas.length, bw = Math.min(28, (gw - 16) / series.length);
   etiquetas.forEach((lab, i) => {
@@ -396,10 +490,16 @@ function barras(svg, etiquetas, series, colores, nombres, f) {
     series.forEach((s, j) => {
       const h = (H - pad.t - pad.b) * s[i] / max, x = x0 + j * (bw + 2), y = H - pad.b - h, rr = Math.min(4, h);
       if (h > 0) el('path', { d: `M${x},${H - pad.b} V${y + rr} Q${x},${y} ${x + rr},${y} H${x + bw - rr} Q${x + bw},${y} ${x + bw},${y + rr} V${H - pad.b} Z`, fill: colores[j] }, svg);
-      tip(el('rect', { x: x - 2, y: pad.t, width: bw + 4, height: H - pad.t - pad.b, fill: 'transparent' }, svg), `${lab} · ${nombres[j]}: ${f(s[i])}`);
+      tip(el('rect', { x: x - 2, y: pad.t, width: bw + 4, height: H - pad.t - pad.b, fill: 'transparent' }, svg),
+        `${lab} · ${nombres[j]}: ${f(s[i])}${extra ? ` · ${extra(i)}` : ''}`);
     });
     el('text', { x: pad.l + gw * i + gw / 2, y: H - 6, 'text-anchor': 'middle' }, svg).textContent = lab;
   });
+  if (umbral > 0) {
+    const y = H - pad.b - (H - pad.t - pad.b) * umbral / max;
+    el('line', { x1: pad.l, x2: W - pad.r, y1: y, y2: y, stroke: '#f87171', 'stroke-width': 1.5, 'stroke-dasharray': '5 4' }, svg);
+    el('text', { x: W - pad.r, y: y - 5, 'text-anchor': 'end', style: 'fill:#f87171' }, svg).textContent = `límite ${f(umbral)}`;
+  }
 }
 function graficos() {
   const meses = [];
@@ -500,6 +600,11 @@ function modalLead(id) {
   let ultimo = 'UY';
   try { ultimo = localStorage.getItem('pais-lead') || 'UY'; } catch {}
   const paisSel = tel.pais ?? l.pais ?? ultimo;
+  let canalSel = 'whatsapp';
+  try { canalSel = l.canal ?? localStorage.getItem('canal-lead') ?? 'whatsapp'; } catch {}
+  // Anuncios con gasto en los últimos 45 días (y el que ya tenía el lead, aunque sea viejo).
+  const desde = new Date(Date.now() - 45 * 86400000).toISOString().slice(0, 10);
+  const lista = (D.anuncios ?? []).filter((a) => (a.ultimo_gasto && a.ultimo_gasto >= desde) || a.id === l.anuncio_id);
   abrir(`<h3>${id ? esc(l.nombre) : 'Nuevo lead'}</h3><div class="sub">Lead de WhatsApp que todavía no agendó. Cuando agende, entra solo desde Calendly.</div>
     <form id="f-lead" style="display:contents"><div class="campos">
       <label>Nombre<input name="nombre" required value="${esc(l.nombre ?? '')}"></label>
@@ -507,6 +612,11 @@ function modalLead(id) {
         <select name="pais" aria-label="País">${calc.PAISES.map(([c, b, pre]) => `<option value="${c}" ${paisSel === c ? 'selected' : ''}>${b} ${pre}</option>`).join('')}
           <option value="OTRO" ${paisSel === 'OTRO' ? 'selected' : ''}>Otro</option></select>
         <input name="telefono" inputmode="tel" placeholder="${paisSel === 'OTRO' ? '+código número' : '99 123 456'}" value="${esc(tel.numero)}"></span></label></div>
+      ${D.anuncios === null ? '' : `<div class="campos">
+        <label>¿Por dónde llegó?<select name="canal">${Object.entries(CANAL).map(([k, t]) => `<option value="${k}" ${canalSel === k ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
+        <label>¿De qué anuncio?<select name="anuncio_id" ${canalSel === 'organico' ? 'disabled' : ''}><option value="">No sé / no lo vi</option>
+          ${lista.map((a) => `<option value="${esc(a.id)}" ${l.anuncio_id === a.id ? 'selected' : ''}>${esc(a.nombre)}</option>`).join('')}</select></label></div>
+        <small class="sub" style="margin-top:-6px">${lista.length ? 'WhatsApp e Instagram muestran arriba del chat el anuncio al que respondió.' : 'La lista de anuncios se llena sola cuando conectemos Meta.'}</small>`}
       <label>¿Con cuánto capital cuenta?</label>
       <div class="opciones">${Object.entries(CAPITAL_LEAD).map(([k, t]) =>
         `<label class="opcion ${l.capital === k ? 'on' : ''}" style="flex-direction:row;align-items:center"><input type="radio" name="capital" value="${k}" ${l.capital === k ? 'checked' : ''} style="width:auto">${t}</label>`).join('')}</div>
@@ -515,6 +625,11 @@ function modalLead(id) {
       <div class="error"></div>
       <div class="pie"><button type="button" class="btn alt" data-a="cerrar">Cancelar</button><button type="submit" class="btn">Guardar</button></div></form>`);
   $('#f-lead').addEventListener('change', (e) => {
+    if (e.target.name === 'canal') {
+      const sel = $('#f-lead [name=anuncio_id]');
+      sel.disabled = e.target.value === 'organico';
+      if (sel.disabled) sel.value = '';
+    }
     if (e.target.name === 'pais') $('#f-lead [name=telefono]').placeholder = e.target.value === 'OTRO' ? '+código número' : '99 123 456';
     if (e.target.name === 'capital') $('#f-lead').querySelectorAll('.opcion').forEach((o) => o.classList.toggle('on', o.contains(e.target)));
   });
@@ -524,6 +639,10 @@ function modalLead(id) {
       try { localStorage.setItem('pais-lead', f.pais); } catch {}
       const telefono = f.pais === 'OTRO' ? (f.telefono.trim() || null) : calc.armarTelefono(f.pais, f.telefono);
       const lead = { nombre: f.nombre, telefono, pais: f.pais, capital: f.capital || null, estado: f.estado, notas: f.notas || null };
+      if (D.anuncios !== null) {
+        try { localStorage.setItem('canal-lead', f.canal); } catch {}
+        Object.assign(lead, { canal: f.canal || null, anuncio_id: f.canal === 'organico' ? null : f.anuncio_id || null });
+      }
       return id ? api.actualizarLead(id, lead) : api.crearLead(lead);
     });
   };
@@ -634,6 +753,7 @@ document.addEventListener('click', async (e) => {
       case 'mes-ant': mes = calc.mesAnterior(mes); pintar(); break;
       case 'mes-sig': mes = calc.mesAnterior(mes, -1); pintar(); break;
       case 'meta': metaSel = k; pintar(); break;
+      case 'vista': vista = k; window.scrollTo(0, 0); pintar(); break;
       case 'tab-llamadas': tabLlamadas = k; pintar(); break;
       case 'tab-cobros': tabCobros = k; pintar(); break;
       case 'tab-ajustes': tabAjustes = k; modalAjustes(); break;

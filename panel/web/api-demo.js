@@ -51,12 +51,33 @@ const NOMBRES = ['Lucía Pérez', 'Martín Gómez', 'Sofía Rodríguez', 'Diego 
   'Carolina Ríos', 'Santiago Núñez', 'Paula Acosta', 'Bruno Herrera'];
 const CAPITAL = ['Más de USD 3.000', 'Entre USD 2.000 y 3.000', 'Entre USD 1.500 y 2.000', 'Menos de USD 1.500', 'Hoy no tengo capital'];
 
-const agendas = [], ventas = [], pagos = [], leads = [], metaGasto = [];
+const agendas = [], ventas = [], pagos = [], leads = [], metaGasto = [], metaAnuncios = [];
+// Anuncios inventados. "peso" = qué parte del gasto se lleva; "tira" = qué tan seguido trae agendas.
+const ANUNCIOS = [
+  { id: '120210001', nombre: 'Video Damián · De sueldo a Amazon', campana: 'EVG-UY Conversaciones', peso: 0.32, tira: 0.34 },
+  { id: '120210002', nombre: 'Testimonio Alejandro · Primer producto', campana: 'EVG-AR Conversaciones', peso: 0.24, tira: 0.30 },
+  { id: '120210003', nombre: 'Reel · 3 errores al empezar FBA', campana: 'EVG-UY Conversaciones', peso: 0.18, tira: 0.16 },
+  { id: '120210004', nombre: 'Carrusel · Cuánto se necesita para arrancar', campana: 'EVG-AR Conversaciones', peso: 0.14, tira: 0.05 },
+  { id: '120210005', nombre: 'Video web · Clase gratis', campana: 'EVG-Web Tráfico', peso: 0.08, tira: 0.08 },
+  { id: '120210006', nombre: 'Historia · Pregunta de capital', campana: 'EVG-UY Conversaciones', peso: 0.04, tira: 0.0 },
+];
+const anuncios = ANUNCIOS.map(({ id, nombre, campana }) => ({ id, nombre, campana, ultimo_gasto: diaISO(hoy) }));
+function anuncioAlAzar() {
+  let x = azar();
+  for (const a of ANUNCIOS) { if ((x -= a.tira) < 0) return a.id; }
+  return null;   // orgánico o sin identificar
+}
 const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
 for (let d = new Date(inicioMes); d.getMonth() === inicioMes.getMonth(); d.setDate(d.getDate() + 1)) {
   if (d <= hoy) {
     metaGasto.push({ fecha: diaISO(d), pais: 'UY', gasto: 28 + Math.round(azar() * 8), conversaciones: 30 + Math.round(azar() * 15) });
     metaGasto.push({ fecha: diaISO(d), pais: 'AR', gasto: 22 + Math.round(azar() * 8), conversaciones: 35 + Math.round(azar() * 15) });
+    const [uy, ar] = metaGasto.slice(-2);
+    for (const a of ANUNCIOS) {
+      metaAnuncios.push({ fecha: diaISO(d), anuncio_id: a.id, gasto: Math.round((uy.gasto + ar.gasto) * a.peso * 100) / 100,
+        conversaciones: a.campana.includes('Web') ? 0 : Math.round((uy.conversaciones + ar.conversaciones) * a.peso),
+        clics: a.campana.includes('Web') ? 20 + Math.round(azar() * 10) : 0 });
+    }
   }
   const porDia = Math.floor(azar() * 3);
   for (let i = 0; i < porDia; i++) {
@@ -72,7 +93,8 @@ for (let d = new Date(inicioMes); d.getMonth() === inicioMes.getMonth(); d.setDa
       resultado = x < 0.15 ? 'no_se_presento' : !calificada ? 'no_compro' : x < 0.55 ? 'compro' : x < 0.75 ? 'seguimiento' : 'no_compro';
     }
     const a = { id: uid(), nombre: elegir(NOMBRES), telefono: pais === 'UY' ? '+598 9' : '+54 9 11', pais, capital, calificada, nivel,
-      inicio: inicio.toISOString(), estado: 'activa', resultado, closer_id: resultado === 'pendiente' ? null : 'ramiro', notas: '' };
+      inicio: inicio.toISOString(), estado: 'activa', resultado, closer_id: resultado === 'pendiente' ? null : 'ramiro', notas: '',
+      anuncio_id: anuncioAlAzar() };
     agendas.push(a);
     if (resultado === 'compro') {
       const oferta = elegir(ofertas);
@@ -90,7 +112,7 @@ for (let i = 0; i < 22; i++) {
   const d = new Date(inicioMes.getTime() + azar() * (hoy - inicioMes));
   leads.push({ id: uid(), nombre: elegir(NOMBRES), telefono: '', pais: azar() < 0.6 ? 'UY' : 'AR',
     capital: elegir(['sin_capital', 'menos_1500', '1500_3000', 'mas_3000']), estado: elegir(['calificado', 'calificado', 'nutrir', 'agendado', 'descartado']),
-    setter_id: 'gabo', notas: '', creado: d.toISOString() });
+    setter_id: 'gabo', notas: '', creado: d.toISOString(), canal: elegir(['whatsapp', 'whatsapp', 'instagram', 'organico']), anuncio_id: anuncioAlAzar() });
 }
 leads.sort((a, b) => b.creado.localeCompare(a.creado));
 
@@ -119,6 +141,7 @@ export async function cargar() {
     costosFijos: perfil.rol === 'admin' ? costosFijos : [],
     configPrivada: perfil.rol === 'admin' ? configPrivada : null,
     gastos: perfil.rol === 'admin' ? gastos : [],
+    anuncios, metaAnuncios: ['admin', 'socio'].includes(perfil.rol) ? metaAnuncios : [],
   });
 }
 

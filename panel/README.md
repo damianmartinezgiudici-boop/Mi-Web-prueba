@@ -77,3 +77,14 @@ node --experimental-strip-types --test tests/logica.test.ts
    los datos son los permisos de la base). Subir la carpeta `web/` a Cloudflare Pages.
 8. **Dominio:** en GoDaddy, crear un registro CNAME `panel` → `<proyecto>.pages.dev`, y agregar el dominio en Cloudflare Pages.
 9. **Equipo:** desde el panel, ⚙ Ajustes → Equipo → invitar por mail con su rol.
+
+## Página de anuncios (admin y socios)
+
+Botón **📣 Anuncios** en el encabezado. Muestra inversión, costo por agenda, costo por venta y retorno, y una tabla
+anuncio por anuncio (solo campañas `EVG-`) con una sugerencia: Escalar, Mantener, Revisar o Juntando datos.
+
+- **Gasto por anuncio:** lo trae `sincronizar` de Meta (tablas `anuncios` y `meta_anuncios`).
+- **De qué anuncio vino cada agenda:**
+  - Anuncios a WhatsApp o Instagram: Gabo elige el anuncio al cargar el lead. La agenda se une al lead por el WhatsApp.
+  - Anuncios a la web: el link de Calendly tiene que llevar `utm_content={{ad.id}}`. En Meta se configura en el anuncio, en *Parámetros de URL*.
+- **Para activarla:** pegar `supabase/migrations/0006_anuncios.sql` y después volver a pegar `sincronizar` y `calendly-webhook`, en ese orden.
