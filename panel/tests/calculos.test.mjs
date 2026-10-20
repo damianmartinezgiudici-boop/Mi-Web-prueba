@@ -125,3 +125,18 @@ test('gastos del mes: comisiones aparte y extras, solo en su mes', () => {
   assert.equal(g.extras, 200);
   assert.equal(g.neta, 940 - 150 - 144 - 200);
 });
+
+test('setter: 5% de todo lo que entra, la venta la cierre quien la cierre', () => {
+  const d = base();
+  d.config.comision_setter_pct = 5;
+  d.perfiles.push({ id: 'gabo', rol: 'setter' });
+  d.ventas.push({ id: 'v2', fecha: '2026-11-05', precio: 2500, pais: 'AR', closer_id: 'pedro' });
+  d.pagos.push({ venta_id: 'v2', fecha: '2026-11-05', monto: 2500, neto: 2500, estado: 'recibido' });
+  const r = resumenMes(d, '2026-11');
+  assert.deepEqual(r.comisiones.gabo, { confirmada: (940 + 2500) * 0.05, aConfirmar: 200 * 0.05 });
+  assert.deepEqual(r.comisiones.ramiro, { confirmada: 94, aConfirmar: 20 });   // Ramiro sigue igual
+  assert.equal(r.totalComisiones, 94 + 172);
+  // Sin el dato cargado en la base, no hay comisión de setter (ni números rotos)
+  delete d.config.comision_setter_pct;
+  assert.equal(resumenMes(d, '2026-11').comisiones.gabo, undefined);
+});

@@ -18,7 +18,7 @@ const perfiles = [
 ];
 const configPrivada = { socio_pct: 30 };
 const config = {
-  meta_base: 30000, meta_objetivo: 40000, meta_record: 50000, comision_closer_pct: 10, capital_minimo: 1000,
+  meta_base: 30000, meta_objetivo: 40000, meta_record: 50000, comision_closer_pct: 10, comision_setter_pct: 5, capital_minimo: 1000,
   sup_ticket: 1530, sup_cierre_pct: 30, sup_presentan_pct: 75, sup_calificadas_pct: 60, sup_lead_agenda_pct: 5, sup_costo_agenda: 35,
 };
 const ofertas = [

@@ -294,11 +294,12 @@ function tarjetaEquipo(r, e) {
   return `<div class="card"><h2>Equipo este mes</h2><div class="sub">Contra la meta elegida</div><div class="list">
     ${activos.map((p) => {
       const leadsFila = `<div class="row"><span class="who">${esc(p.nombre)} · leads calificados</span><b>${D.leads.filter((l) => l.setter_id === p.id && calc.mesDe(l.creado) === mes && ['calificado', 'agendado'].includes(l.estado)).length}</b></div>`;
-      if (p.rol === 'setter') return leadsFila;
-      if (p.rol === 'socio') return `<div class="row"><span class="who">${esc(p.nombre)} · ventas</span><b>${ventasDe(p.id)}</b></div>${leadsFila}`;
       const c = r.comisiones[p.id] ?? { confirmada: 0, aConfirmar: 0 };
+      const comisionFila = (pctTxt, base) => `<div class="row"><span class="who">${esc(p.nombre)} · comisión<small>${pctTxt}% de ${base}${c.aConfirmar ? ` · +${usd(c.aConfirmar)} por confirmar` : ''}</small></span><b>${usd(c.confirmada)}</b></div>`;
+      if (p.rol === 'setter') return leadsFila + (Number(D.config.comision_setter_pct) ? comisionFila(Number(D.config.comision_setter_pct), 'todo lo que entra') : '');
+      if (p.rol === 'socio') return `<div class="row"><span class="who">${esc(p.nombre)} · ventas</span><b>${ventasDe(p.id)}</b></div>${leadsFila}`;
       return `<div class="row"><span class="who">${esc(p.nombre)} · ventas</span><b>${ventasDe(p.id)}${e ? ` / ${e.ventas}` : ''}</b></div>
-        <div class="row"><span class="who">${esc(p.nombre)} · comisión<small>${Number(D.config.comision_closer_pct)}% de lo que entra${c.aConfirmar ? ` · +${usd(c.aConfirmar)} por confirmar` : ''}</small></span><b>${usd(c.confirmada)}</b></div>`;
+        ${comisionFila(Number(D.config.comision_closer_pct), 'lo que entra de sus ventas')}`;
     }).join('') || '<div class="vacio">Todavía no hay equipo cargado.</div>'}
     <div class="row"><span class="who">No se presentaron</span><b>${r.noShow} de ${r.noShow + r.hechas}</b></div>
   </div></div>`;
@@ -534,13 +535,13 @@ function modalAjustes() {
         <label>Nombre<input name="nombre" required></label><label>Mail<input name="email" type="email" required></label>
         <label>Rol<select name="rol"><option value="setter">Setter</option><option value="closer">Closer</option><option value="socio">Socio</option><option value="admin">Admin</option></select></label>
         <label>&nbsp;<button type="submit" class="btn">Mandar invitación</button></label></div><div class="error"></div></form>
-      <p class="sub" style="margin:0">Setter: carga leads. Closer: carga resultados, ventas y pagos (cobra comisión). Socio: lo mismo que setter y closer, sin comisión y sin ver ganancias. Admin: todo. Quien no está en esta lista no puede entrar.</p>`;
+      <p class="sub" style="margin:0">Setter: carga leads (cobra comisión sobre todo lo que entra). Closer: carga resultados, ventas y pagos (cobra comisión). Socio: lo mismo que setter y closer, sin comisión y sin ver ganancias. Admin: todo. Quien no está en esta lista no puede entrar.</p>`;
   } else if (t === 'metas') {
     const c = D.config;
     const campo = (k, txt) => `<label>${txt}<input name="${k}" type="number" step="any" min="0" value="${+c[k]}"></label>`;
     cuerpo = `<form id="f-config" style="display:contents"><div class="campos">
       ${campo('meta_base', 'Meta base (USD)')}${campo('meta_objetivo', 'Meta objetivo (USD)')}${campo('meta_record', 'Meta récord (USD)')}
-      ${campo('comision_closer_pct', 'Comisión del closer (%)')}${campo('capital_minimo', 'Capital mínimo para calificar (USD)')}
+      ${campo('comision_closer_pct', 'Comisión del closer (%)')}${'comision_setter_pct' in c ? campo('comision_setter_pct', 'Comisión del setter (%)') : ''}${campo('capital_minimo', 'Capital mínimo para calificar (USD)')}
       ${campo('sup_ticket', 'Ticket promedio (USD)')}${campo('sup_cierre_pct', 'Cierre (%)')}${campo('sup_presentan_pct', 'Se presentan (%)')}
       ${campo('sup_calificadas_pct', 'Agendas calificadas (%)')}${campo('sup_lead_agenda_pct', 'Lead → agenda (%)')}${campo('sup_costo_agenda', 'Costo por agenda (USD)')}
       </div><div class="error"></div><div class="pie"><button type="submit" class="btn">Guardar</button></div></form>`;

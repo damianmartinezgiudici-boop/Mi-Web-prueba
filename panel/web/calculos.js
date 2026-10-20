@@ -41,17 +41,21 @@ export function resumenMes(d, mes, ahora = new Date()) {
   const gasto = gastoFilas.length ? suma(gastoFilas, (g) => g.gasto) : Number(hist?.gasto_meta ?? 0);
   const gastoPais = (p) => suma(gastoFilas.filter((g) => g.pais === p), (g) => g.gasto);
 
-  // Comisión solo para closers (ni el admin ni el socio cobran comisión por vender).
+  // Closer: % de lo que entra de sus ventas. Setter: % de todo lo que entra.
+  // Ni el admin ni el socio cobran comisión.
   const pct = Number(d.config.comision_closer_pct) / 100;
+  const pctSetter = (Number(d.config.comision_setter_pct) || 0) / 100;
+  const setters = pctSetter ? d.perfiles.filter((p) => p.rol === 'setter').map((p) => p.id) : [];
   const esCloser = new Set(d.perfiles.filter((p) => p.rol === 'closer').map((p) => p.id));
   const ventaPorId = new Map(d.ventas.map((v) => [v.id, v]));
   const comisiones = {};
   for (const p of pagos) {
     if (p.estado === 'rechazado') continue;
+    const estado = p.estado === 'recibido' ? 'confirmada' : 'aConfirmar';
+    const sumar = (id, porc) => { comisiones[id] ??= { confirmada: 0, aConfirmar: 0 }; comisiones[id][estado] += Number(p.neto) * porc; };
     const closer = ventaPorId.get(p.venta_id)?.closer_id;
-    if (!esCloser.has(closer)) continue;
-    comisiones[closer] ??= { confirmada: 0, aConfirmar: 0 };
-    comisiones[closer][p.estado === 'recibido' ? 'confirmada' : 'aConfirmar'] += Number(p.neto) * pct;
+    if (esCloser.has(closer)) sumar(closer, pct);
+    for (const s of setters) sumar(s, pctSetter);
   }
 
   const leads = d.leads.filter((l) => mesDe(l.creado) === mes);
