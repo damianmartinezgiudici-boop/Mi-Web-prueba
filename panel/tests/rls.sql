@@ -23,6 +23,7 @@ insert into leads (nombre) values ('hack');
 \echo '== GABO (setter)'
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000c';
 select count(*) as costos_vistos from costos_fijos;
+select count(*) as gastos_vistos from gastos;
 insert into leads (nombre,capital) values ('Lead de Gabo','1500_3000');
 select count(*) as leads from leads;
 update agendas set resultado='compro' where id='inv1';

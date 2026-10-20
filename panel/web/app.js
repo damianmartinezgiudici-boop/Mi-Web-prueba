@@ -12,6 +12,7 @@ let sup = null;                                  // supuestos de la calculadora 
 let tabLlamadas = 'cargar';
 let tabCobros = 'confirmar';
 let tabAjustes = 'equipo';
+const TIPO_GASTO = { extra: 'Gasto extra', comision: 'Comisión' };
 
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -349,7 +350,7 @@ function tarjetaLeads() {
 
 function tarjetaCEO(r) {
   const socioPct = Number(D.configPrivada?.socio_pct ?? 0);
-  const g = calc.ganancia(r, D.costosFijos, socioPct);
+  const g = calc.ganancia(r, D.costosFijos, socioPct, D.gastos);
   const socios = D.perfiles.filter((p) => p.rol === 'socio' && p.activo).map((p) => p.nombre).join(' y ') || 'Socio';
   return `<section class="card lock">
     <h2>🔒 Solo Damián</h2><div class="sub">El resto del equipo no recibe estos datos: la base de datos no se los manda.</div>
@@ -358,10 +359,11 @@ function tarjetaCEO(r) {
       <div>− Meta Ads<b>${usd(g.gasto)}</b></div>
       <div>− Comisiones<b>${usd(g.comisiones)}</b></div>
       <div>− Costos fijos<b>${usd(g.fijos)}</b></div>
-      <div>Costo por venta<b>${usd(g.costoPorVenta)}</b></div>
+      <div>− Gastos extra<b>${usd(g.extras)}</b></div>
       <div>Ganancia neta · ${pct(g.margen)}<b>${usd(g.neta)}</b></div>
     </div>
-    <div class="items" style="margin-top:10px;grid-template-columns:1fr 1fr">
+    <div class="items" style="margin-top:10px;grid-template-columns:repeat(3,1fr)">
+      <div>Costo de Meta por venta<b>${usd(g.costoPorVenta)}</b></div>
       <div>Parte de ${esc(socios)} (${socioPct}%)<b>${usd(g.parteSocio)}</b></div>
       <div class="total">Tu parte<b>${usd(g.tuParte)}</b></div>
     </div></section>`;
@@ -520,7 +522,7 @@ function modalLead(id) {
 
 function modalAjustes() {
   const t = tabAjustes;
-  const tabs = [['equipo', 'Equipo'], ['metas', 'Metas y supuestos'], ['ofertas', 'Ofertas y pagos'], ['costos', 'Costos fijos 🔒'], ['conexiones', 'Conexiones']];
+  const tabs = [['equipo', 'Equipo'], ['metas', 'Metas y supuestos'], ['ofertas', 'Ofertas y pagos'], ['costos', 'Costos fijos 🔒'], ['gastos', 'Gastos del mes 🔒'], ['conexiones', 'Conexiones']];
   let cuerpo = '';
   if (t === 'equipo') {
     cuerpo = `<table class="tabla"><tr><th>Nombre</th><th>Mail</th><th>Rol</th><th></th></tr>
@@ -565,6 +567,23 @@ function modalAjustes() {
       </div>
       <div id="conexion-msg" class="sub" style="margin:0"></div>
       <p class="sub" style="margin:0">El aviso en vivo hace que cada agenda nueva o cancelada aparezca al instante. Además, cada hora se repasa Calendly y se trae el gasto de Meta.</p>`;
+  } else if (t === 'gastos') {
+    const delMes = D.gastos.filter((g) => calc.mesDe(g.fecha) === mes);
+    const total = delMes.reduce((s, g) => s + +g.monto, 0);
+    const hoyEnMes = calc.mesDe(hoyISO()) === mes ? hoyISO() : `${mes}-01`;
+    cuerpo = `<p class="sub" style="margin:0">Gastos sueltos de <b>${nombreMes(mes)}</b>: se restan solo de la ganancia de ese mes. Para otro mes, cambialo con ‹ › arriba.
+      La comisión de Ramiro ya se calcula sola: acá cargá solo comisiones que pagues aparte.</p>
+      <table class="tabla"><tr><th>Fecha</th><th>Concepto</th><th>Tipo</th><th>USD</th><th></th></tr>
+      ${delMes.map((g) => `<tr><td>${fecha(g.fecha)}</td><td>${esc(g.concepto)}</td><td>${TIPO_GASTO[g.tipo]}</td><td>${usd(g.monto)}</td>
+        <td><button class="btn no chico" data-a="borrar-gasto" data-id="${g.id}" aria-label="Borrar">✕</button></td></tr>`).join('')
+        || '<tr><td colspan="5" class="sub">Todavía no hay gastos cargados este mes.</td></tr>'}
+      <tr><th colspan="3">Total</th><th>${usd(total)}</th><th></th></tr></table>
+      <form id="f-gasto" style="display:contents"><div class="campos">
+        <label>Fecha<input name="fecha" type="date" required value="${hoyEnMes}"></label>
+        <label>Concepto<input name="concepto" required placeholder="Ej: editor de videos"></label>
+        <label>Tipo<select name="tipo">${Object.entries(TIPO_GASTO).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></label>
+        <label>Monto (USD)<input name="monto" type="number" min="0.01" step="any" required></label>
+        <label>&nbsp;<button type="submit" class="btn">Agregar gasto</button></label></div><div class="error"></div></form>`;
   } else {
     const total = D.costosFijos.filter((c) => c.activo).reduce((s, c) => s + +c.monto, 0);
     cuerpo = `<table class="tabla"><tr><th>Concepto</th><th>USD por mes</th><th></th></tr>
@@ -580,6 +599,10 @@ function modalAjustes() {
     ${cuerpo}<div class="pie"><button class="btn alt" data-a="cerrar">Cerrar</button></div>`, { ancho: true });
 
   $('#f-invitar')?.addEventListener('submit', (e) => { e.preventDefault(); accionAjustes(e.target, (f) => api.equipo('invitar', f), 'Invitación enviada'); });
+  $('#f-gasto')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    accionAjustes(e.target, (f) => api.guardarFila('gastos', { fecha: f.fecha, concepto: f.concepto, tipo: f.tipo, monto: +f.monto }), 'Gasto agregado');
+  });
   $('#f-config')?.addEventListener('submit', (e) => {
     e.preventDefault();
     accionAjustes(e.target, async (f) => { await api.guardarConfig(Object.fromEntries(Object.entries(f).map(([k, v]) => [k, +v]))); sup = null; }, 'Guardado');
@@ -651,6 +674,7 @@ document.addEventListener('click', async (e) => {
         const fila = tabla === 'ofertas' ? { nombre: 'NUEVA', precio: 1000 } : tabla === 'metodos_pago' ? { nombre: 'Nuevo método', comision_pct: 0 } : { concepto: 'Nuevo costo', monto: 0 };
         await accionAjustes(null, () => api.guardarFila(tabla, fila), 'Agregado'); break;
       }
+      case 'borrar-gasto': if (confirm('¿Borrar este gasto?')) await accionAjustes(null, () => api.borrarFila('gastos', +id), 'Borrado'); break;
       case 'borrar-costo': if (confirm('¿Borrar este costo?')) await accionAjustes(null, () => api.borrarFila('costos_fijos', +id), 'Borrado'); break;
     }
   } catch (err) { aviso('Error: ' + err.message); }

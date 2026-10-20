@@ -39,7 +39,7 @@ export async function cargar(usuario) {
   const perfil = await q(sb.from('perfiles').select('*').eq('id', usuario.id).maybeSingle());
   if (!perfil?.activo) return { perfil: null };
   const esAdmin = perfil.rol === 'admin';
-  const [perfiles, config, ofertas, metodos, agendas, leads, ventas, pagos, metaGasto, historico, costosFijos, configPrivada] =
+  const [perfiles, config, ofertas, metodos, agendas, leads, ventas, pagos, metaGasto, historico, costosFijos, configPrivada, gastos] =
     await Promise.all([
       q(sb.from('perfiles').select('*').order('creado')),
       q(sb.from('config').select('*').single()),
@@ -53,8 +53,10 @@ export async function cargar(usuario) {
       q(sb.from('historico').select('*').order('mes')),
       esAdmin ? q(sb.from('costos_fijos').select('*').order('id')) : [],
       esAdmin ? q(sb.from('config_privada').select('*').single()) : null,
+      // Si todavía no se pegó la migración 0004, el panel carga igual (sin gastos).
+      esAdmin ? q(sb.from('gastos').select('*').order('fecha', { ascending: false })).catch(() => []) : [],
     ]);
-  return { perfil, perfiles, config, ofertas, metodos, agendas, leads, ventas, pagos, metaGasto, historico, costosFijos, configPrivada };
+  return { perfil, perfiles, config, ofertas, metodos, agendas, leads, ventas, pagos, metaGasto, historico, costosFijos, configPrivada, gastos };
 }
 
 /** Avisa cuando alguien del equipo carga o cambia algo. */

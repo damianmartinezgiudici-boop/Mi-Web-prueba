@@ -46,7 +46,7 @@ node --experimental-strip-types --test tests/logica.test.ts
 ## Instalación (una sola vez)
 
 1. **Supabase** (supabase.com, plan gratis): crear el proyecto en la región São Paulo.
-   - SQL Editor → ejecutar `supabase/migrations/0001_panel.sql`.
+   - SQL Editor → ejecutar en orden todos los archivos de `supabase/migrations/` (0001, 0002…).
    - Authentication → Sign In / Providers → **desactivar "Allow new users to sign up"**.
    - Authentication → URL Configuration → Site URL = `https://panel.amazonelitefba.com`.
 2. **Dueño:** Authentication → Users → *Invite user* con el mail de Damián. Después, en el SQL Editor:

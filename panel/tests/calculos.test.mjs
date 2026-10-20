@@ -112,3 +112,16 @@ test('mes viejo con agendas traídas de Calendly sigue usando el cobrado y las v
   assert.equal(sep.uy, 8);
   assert.equal(Math.round(sep.costoAgenda), 2602);
 });
+
+test('gastos del mes: comisiones aparte y extras, solo en su mes', () => {
+  const r = resumenMes(base(), '2026-11');
+  const gastos = [
+    { fecha: '2026-11-10', tipo: 'comision', monto: 50 },
+    { fecha: '2026-11-15', tipo: 'extra', monto: 200 },
+    { fecha: '2026-10-31', tipo: 'extra', monto: 999 },   // otro mes: no cuenta
+  ];
+  const g = ganancia(r, [], 0, gastos);
+  assert.equal(g.comisiones, 94 + 50);
+  assert.equal(g.extras, 200);
+  assert.equal(g.neta, 940 - 150 - 144 - 200);
+});

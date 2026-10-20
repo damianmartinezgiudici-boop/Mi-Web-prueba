@@ -36,6 +36,9 @@ const costosFijos = [
   { id: 2, concepto: 'Equipo de coaches', monto: 1080, activo: true },
   { id: 3, concepto: 'Plataformas (Skool, ManyChat, Calendly, Zoom, verificado IG, otras)', monto: 300, activo: true },
 ];
+const gastos = [
+  { id: 1, fecha: new Date().toISOString().slice(0, 10), concepto: 'Editor de videos', tipo: 'extra', monto: 150 },
+];
 const historico = [
   { mes: '2026-07-01', cobrado: 26340, ventas_uy: 20, ventas_ar: 1, gasto_meta: 3071.05, agendas: 146 },
   { mes: '2026-08-01', cobrado: 26192, ventas_uy: 11, ventas_ar: 6, gasto_meta: 4998.64, agendas: 132 },
@@ -115,6 +118,7 @@ export async function cargar() {
     perfil, perfiles, config, ofertas, metodos, agendas: agendas.filter((a) => !a.excluida), leads, ventas, pagos, metaGasto, historico,
     costosFijos: perfil.rol === 'admin' ? costosFijos : [],
     configPrivada: perfil.rol === 'admin' ? configPrivada : null,
+    gastos: perfil.rol === 'admin' ? gastos : [],
   });
 }
 
@@ -132,7 +136,7 @@ export async function crearPago(p) { pagos.unshift(nuevoPago({ ...p, informado_p
 export async function revisarPago(id, estado) { Object.assign(pagos.find((p) => p.id === id), { estado, revisado_por: yo }); avisar(); }
 export async function guardarConfig(c) { Object.assign(config, c); avisar(); }
 export async function guardarConfigPrivada(c) { Object.assign(configPrivada, c); avisar(); }
-const TABLAS = { ofertas, metodos_pago: metodos, costos_fijos: costosFijos };
+const TABLAS = { ofertas, metodos_pago: metodos, costos_fijos: costosFijos, gastos };
 export async function guardarFila(tabla, fila) {
   const t = TABLAS[tabla];
   if (fila.id) Object.assign(t.find((x) => x.id === fila.id), fila);

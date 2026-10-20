@@ -130,17 +130,21 @@ export function saldos(d) {
 }
 
 /** Bloque del CEO: ganancia del mes y reparto con el socio. */
-export function ganancia(r, costosFijos, socioPct = 0) {
+export function ganancia(r, costosFijos, socioPct = 0, gastos = []) {
   const fijos = suma(costosFijos.filter((c) => c.activo), (c) => c.monto);
-  const neta = r.cobrado - r.gasto - r.totalComisiones - fijos;
+  const delMes = gastos.filter((g) => mesDe(g.fecha) === r.mes);
+  const comisiones = r.totalComisiones + suma(delMes.filter((g) => g.tipo === 'comision'), (g) => g.monto);
+  const extras = suma(delMes.filter((g) => g.tipo !== 'comision'), (g) => g.monto);
+  const neta = r.cobrado - r.gasto - comisiones - fijos - extras;
   const parteSocio = neta > 0 ? neta * Number(socioPct) / 100 : 0;
   return {
     parteSocio,
     tuParte: neta - parteSocio,
     ingresos: r.cobrado,
     gasto: r.gasto,
-    comisiones: r.totalComisiones,
+    comisiones,
     fijos,
+    extras,
     neta,
     margen: r.cobrado ? neta / r.cobrado : null,
     costoPorVenta: r.ventas ? r.gasto / r.ventas : null,
