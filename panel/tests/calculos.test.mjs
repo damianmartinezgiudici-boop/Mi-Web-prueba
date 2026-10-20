@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mesDe, mesAnterior, resumenMes, serie, embudoInverso, saldos, ganancia, armarTelefono, separarTelefono, resumenAnuncios, sugerencia } from '../web/calculos.js';
+import { mesDe, mesAnterior, resumenMes, serie, embudoInverso, saldos, ganancia, armarTelefono, separarTelefono, resumenAnuncios, sugerencia, ultimos30 } from '../web/calculos.js';
 
 const base = () => ({
   config: { comision_closer_pct: 10 },
@@ -198,4 +198,15 @@ test('anuncios: de qué anuncio vino cada agenda y cada venta', () => {
   assert.equal(sugerencia(b, 35), 'datos');
   assert.equal(sugerencia({ ...b, gasto: 200, agendas: 0 }, 35), 'revisar');
   assert.equal(sugerencia({ ...b, gasto: 200, agendas: 5, porAgenda: 40 }, 35), 'mantener');
+});
+
+test('anuncios: últimos 30 días', () => {
+  assert.deepEqual(ultimos30('2026-11', new Date('2026-11-14T15:00:00Z')), { desde: '2026-10-16', hasta: '2026-11-14' });
+  assert.deepEqual(ultimos30('2026-10', new Date('2026-11-14T15:00:00Z')), { desde: '2026-10-02', hasta: '2026-10-31' });
+  const d = base();
+  d.anuncios = [{ id: '111', nombre: 'Video A' }];
+  d.metaAnuncios = [{ fecha: '2026-10-20', anuncio_id: '111', gasto: 10, conversaciones: 1, clics: 0 },
+                    { fecha: '2026-11-10', anuncio_id: '111', gasto: 5, conversaciones: 1, clics: 0 },
+                    { fecha: '2026-09-01', anuncio_id: '111', gasto: 99, conversaciones: 1, clics: 0 }];
+  assert.equal(resumenAnuncios(d, { desde: '2026-10-16', hasta: '2026-11-14' }).anuncios[0].gasto, 15);
 });

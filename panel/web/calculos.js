@@ -197,14 +197,32 @@ export function anunciosPorAgenda(d) {
   return out;
 }
 
-/** Cada anuncio del mes: gasto, mensajes, leads, agendas, ventas y lo que costó cada cosa. */
-export function resumenAnuncios(d, mes) {
-  const delMes = (f) => mesDe(f) === mes;
+const fmtDia = new Intl.DateTimeFormat('en-CA', { timeZone: ZONA });
+/** '2026-11-03' para una fecha ISO, en hora de Uruguay. */
+export const diaDe = (f) => (/^\d{4}-\d{2}-\d{2}$/.test(f) ? f : fmtDia.format(new Date(f)));
+
+/** Los últimos 30 días hasta hoy, o hasta el fin del mes elegido si es un mes pasado. */
+export function ultimos30(mes, hoy = new Date()) {
+  const [a, m] = mes.split('-').map(Number);
+  const finMes = new Date(Date.UTC(a, m, 0)).toISOString().slice(0, 10);
+  const hasta = diaDe(hoy.toISOString()) < finMes ? diaDe(hoy.toISOString()) : finMes;
+  const desde = new Date(Date.parse(hasta + 'T12:00:00Z') - 29 * 86400000).toISOString().slice(0, 10);
+  return { desde, hasta };
+}
+
+/**
+ * Cada anuncio de un período ('2026-11' o { desde, hasta }): gasto, mensajes, leads, agendas, ventas
+ * y lo que costó cada cosa.
+ */
+export function resumenAnuncios(d, periodo) {
+  const delMes = typeof periodo === 'string'
+    ? (f) => mesDe(f) === periodo
+    : (f) => { const x = diaDe(f); return x >= periodo.desde && x <= periodo.hasta; };
   const filas = new Map();
   const fila = (id) => {
     if (!filas.has(id)) {
       const a = (d.anuncios ?? []).find((x) => x.id === id);
-      filas.set(id, { id, nombre: a?.nombre ?? `Anuncio ${id}`, campana: a?.campana ?? null,
+      filas.set(id, { id, nombre: a?.nombre ?? `Anuncio ${id}`, campana: a?.campana ?? null, imagen: a?.imagen ?? null, estado: a?.estado ?? null,
         gasto: 0, conversaciones: 0, clics: 0, leads: 0, agendas: 0, calificadas: 0, ventas: 0, vendido: 0 });
     }
     return filas.get(id);

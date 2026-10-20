@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
-import { paisPorTelefono, capitalCalifica, nivelCapital, agendaDesdeCalendly, firmaCalendlyValida, gastoDesdeMeta, anuncioDesdeMeta, anuncioDeUtm }
+import { paisPorTelefono, capitalCalifica, nivelCapital, agendaDesdeCalendly, firmaCalendlyValida, gastoDesdeMeta, anuncioDesdeMeta, anuncioDeUtm, estadoAnuncio }
   from '../supabase/functions/_shared/logica.ts';
 
 test('país por teléfono', () => {
@@ -98,4 +98,12 @@ test('anuncios: fila de Meta por anuncio y UTM de Calendly', () => {
   const fila = agendaDesdeCalendly({ uri: 'x/inv1', name: 'A', tracking: { utm_content: '120210000000001' } },
     { uri: 'x/ev1', start_time: '2026-11-15T15:00:00Z', status: 'active' }, 1000);
   assert.equal(fila.anuncio_id, '120210000000001');
+});
+
+test('estado del anuncio en palabras', () => {
+  assert.equal(estadoAnuncio('ACTIVE'), 'activo');
+  assert.equal(estadoAnuncio('CAMPAIGN_PAUSED'), 'pausado');
+  assert.equal(estadoAnuncio('ADSET_PAUSED'), 'pausado');
+  assert.equal(estadoAnuncio('PENDING_REVIEW'), 'en revisión');
+  assert.equal(estadoAnuncio(null), null);
 });

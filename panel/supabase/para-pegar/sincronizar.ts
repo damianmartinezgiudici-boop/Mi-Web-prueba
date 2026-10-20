@@ -166,6 +166,17 @@ function anuncioDesdeMeta(fila: any) {
   };
 }
 
+/** Estado del anuncio en Meta (effective_status) en palabras del panel. */
+function estadoAnuncio(s?: string | null): string | null {
+  if (!s) return null;
+  if (s === 'ACTIVE') return 'activo';
+  if (s.includes('PAUSED')) return 'pausado';
+  if (s === 'DELETED' || s === 'ARCHIVED') return 'archivado';
+  if (s === 'DISAPPROVED') return 'rechazado';
+  if (s.includes('REVIEW')) return 'en revisión';
+  return s.toLowerCase().replace(/_/g, ' ');
+}
+
 // ── sincronizar ──
 // Corre cada hora (cron) o desde el botón "Actualizar" del admin.
 // Trae el gasto de Meta por país y día, y repasa las agendas de Calendly por si se perdió algún aviso.
@@ -232,6 +243,8 @@ async function sincronizarAnuncios(db: ReturnType<typeof servicio>, desde: strin
     url = j.paging?.next ?? null;
   }
   if (anuncios.size) {
+    // Imagen de referencia y estado de cada anuncio. Si Meta no los da, se guarda igual el gasto.
+    try { await imagenesDeAnuncios(token, cuenta, anuncios); } catch (e) { console.error('imágenes de anuncios', e); }
     // No pisar un último gasto más nuevo que ya estaba guardado.
     const { data: guardados } = await db.from('anuncios').select('id, ultimo_gasto').in('id', [...anuncios.keys()]);
     for (const g of guardados ?? []) {
@@ -244,6 +257,25 @@ async function sincronizarAnuncios(db: ReturnType<typeof servicio>, desde: strin
     if (e2) throw e2;
   }
   return `${anuncios.size} anuncios, ${dias.length} filas`;
+}
+
+/** Miniatura y estado de cada anuncio, de a 50 por pedido. Primero en 160 px; si Meta no acepta el tamaño, la de siempre. */
+async function imagenesDeAnuncios(token: string, cuenta: string, anuncios: Map<string, any>) {
+  const ids = [...anuncios.keys()];
+  for (let i = 0; i < ids.length; i += 50) {
+    const pedir = (creative: string) => fetch(`${META}/act_${cuenta}/ads?` + new URLSearchParams({
+      fields: `id,effective_status,${creative}`, limit: '50', access_token: token,
+      filtering: JSON.stringify([{ field: 'id', operator: 'IN', value: ids.slice(i, i + 50) }]),
+    }));
+    let r = await pedir('creative.thumbnail_width(160).thumbnail_height(160){thumbnail_url,image_url}');
+    if (!r.ok) r = await pedir('creative{thumbnail_url,image_url}');
+    const j: any = await r.json();
+    if (!r.ok) throw new Error('Meta: ' + (j.error?.message ?? r.status));
+    for (const ad of j.data ?? []) {
+      const a = anuncios.get(String(ad.id));
+      if (a) Object.assign(a, { imagen: ad.creative?.image_url ?? ad.creative?.thumbnail_url ?? null, estado: estadoAnuncio(ad.effective_status) });
+    }
+  }
 }
 
 async function cal(path: string, token: string) {

@@ -247,83 +247,128 @@ function cabecera() {
 // ───────────── Página de anuncios (admin y socios) ─────────────
 function pintarAnuncios() {
   const r = calc.resumenMes(D, mes);
-  const a = calc.resumenAnuncios(D, mes);
+  const rango = calc.ultimos30(mes);
+  const a = calc.resumenAnuncios(D, rango);
+  const am = calc.resumenAnuncios(D, mes);
   const umbral = +D.config.sup_costo_agenda;
   const conversaciones = D.metaGasto.filter((g) => calc.mesDe(g.fecha) === mes).reduce((t, g) => t + Number(g.conversaciones), 0);
   const div = (x, y) => (y ? x / y : null);
   const centavos = (n) => (n != null && n < 10 ? '$' + n.toFixed(2).replace('.', ',') : usd(n));
   const veces = (n) => (n == null ? '—' : n.toFixed(1).replace('.', ',') + 'x');
   const porAgenda = div(r.gasto, r.agendas);
-  const cobertura = div(a.agendasConAnuncio, a.agendas);
+  const sinOrigen = am.agendas ? 1 - am.agendasConAnuncio / am.agendas : null;
+
+  // Un solo aviso, el más importante.
+  let alerta = '';
+  if (porAgenda != null && porAgenda > umbral * 1.2) {
+    alerta = `Cada agenda está costando ${pct(porAgenda / umbral - 1)} más que el límite de ${usd(umbral)}: no subir el presupuesto hasta bajarlo.`;
+  } else if (sinOrigen != null && sinOrigen > 0.3) {
+    alerta = `El ${pct(sinOrigen)} de las agendas del mes no tiene anuncio identificado: sin ese dato no se puede decidir qué escalar. Gabo tiene que marcar el anuncio en cada lead.`;
+  }
   const aviso = D.anuncios === null
-    ? 'Falta un paso en Supabase para activar esta página (la migración 0006). Pedíselo a Claude.'
+    ? 'Falta un paso en Supabase para activar esta página. Pedíselo a Claude.'
     : !D.metaGasto.length ? 'Meta todavía no está conectado: esta página se llena sola cuando conectemos tu cuenta publicitaria.' : '';
+  const dato = (lbl, val, clase = '') => `<div class="dato ${clase}"><span>${lbl}</span><b>${val}</b></div>`;
+
   $('#app').innerHTML = `
   ${api.demo ? barraDemo() : ''}
   <div class="wrap">
     ${cabecera()}
     ${aviso ? `<div class="card" style="margin-bottom:16px;padding:12px 20px;font-size:13px;color:var(--ink-2)">📣 ${aviso}</div>` : ''}
-    <section class="grid kpis">
-      <div class="kpi g1">
-        <div class="lbl">Inversión en Meta</div>
-        <div class="val">${usd(r.gasto)}</div>
-        <div class="meta">${num(conversaciones)} conversaciones · ${centavos(div(r.gasto, conversaciones))} cada una</div>
+
+    <section class="card meta-ads ${alerta ? 'atencion' : ''}">
+      <div class="meta-cab"><h2>Meta Ads <small>${esteMesTxt()}</small></h2>
+        <span class="badge-estado ${alerta ? 'mal' : 'bien'}">${alerta ? 'ATENCIÓN' : 'EN ORDEN'}</span></div>
+      <div class="datos">
+        ${dato('Inversión', usd(r.gasto))}
+        ${dato('Agendas', num(r.agendas))}
+        ${dato('Por agenda', usd(porAgenda), porAgenda > umbral * 1.2 ? 'rojo' : '')}
+        ${dato('Ventas', num(r.ventas))}
+        ${dato('Por venta', usd(div(r.gasto, r.ventas)))}
+        ${dato('ROAS', veces(div(r.vendido, r.gasto)))}
+        ${dato('Leads', num(conversaciones))}
+        ${dato('Sin anuncio', sinOrigen == null ? '—' : pct(sinOrigen), sinOrigen > 0.3 ? 'rojo' : '')}
       </div>
-      <div class="kpi plain">
-        <div class="lbl">Costo por agenda</div>
-        <div class="val">${usd(porAgenda)}</div>
-        <div class="meta">${chipMeta(porAgenda, umbral, true, `límite ${usd(umbral)}`)} · ${r.agendas} agendas · ${r.calificadas} calificadas</div>
-      </div>
-      <div class="kpi plain">
-        <div class="lbl">Costo por venta</div>
-        <div class="val">${usd(div(r.gasto, r.ventas))}</div>
-        <div class="meta">${r.ventas} ventas en el mes</div>
-      </div>
-      <div class="kpi g2">
-        <div class="lbl">Retorno</div>
-        <div class="val">${veces(div(r.vendido, r.gasto))}</div>
-        <div class="meta">${usd(r.vendido)} vendidos por cada ${usd(r.gasto)} invertidos</div>
-      </div>
+      ${alerta ? `<p class="meta-alerta">• ${alerta}</p>` : ''}
+      <p class="meta-pie">Inversión de las campañas con EVG- en el nombre, traída de Meta. ROAS = lo vendido ÷ lo invertido.</p>
     </section>
 
-    <section class="grid dos">
-      <div class="card"><h2>Inversión y agendas por mes</h2><div class="sub">Cuánto se invirtió en Meta · pasá el mouse para ver las agendas</div><svg id="c-inv" viewBox="0 0 560 200" width="100%"></svg></div>
-      <div class="card"><h2>Costo por agenda</h2><div class="sub">La línea punteada es el límite que pusiste en los supuestos (${usd(umbral)})</div><svg id="c-cpa2" viewBox="0 0 360 200" width="100%"></svg></div>
+    <section class="grid graf2" style="margin-top:16px">
+      <div class="card"><h2>Inversión y agendas por mes</h2>
+        <div class="legend"><span><i style="background:#22d3ee"></i>Inversión</span><span><i style="background:#fb7185"></i>Agendas</span></div>
+        <svg id="c-inv" viewBox="0 0 360 210" width="100%"></svg></div>
+      <div class="card"><h2>Costo por agenda</h2>
+        <div class="legend"><span><i style="background:#8b5cf6"></i>Por agenda</span><span><i style="background:#f87171"></i>Umbral ${usd(umbral)}</span></div>
+        <svg id="c-cpa2" viewBox="0 0 360 210" width="100%"></svg></div>
     </section>
 
     <section class="card" style="margin-top:16px">
       <h2>Los anuncios, uno por uno</h2>
-      <div class="sub">${nombreMes(mes)} · solo campañas con EVG- en el nombre. Las agendas y ventas de cada anuncio salen de lo que carga Gabo y del link de Calendly.</div>
-      ${cobertura == null ? '' : `<p style="margin:4px 0 12px;font-size:13px">${chipMeta(cobertura, 0.7, false, `sabemos de qué anuncio vino el ${pct(cobertura)} de las agendas`)}
-        <span style="color:var(--ink-3)">· ${a.agendasConAnuncio} de ${a.agendas}${cobertura < 0.7 ? ' · si es bajo, falta que Gabo marque el anuncio en cada lead' : ''}</span></p>`}
+      <div class="sub">Últimos 30 días (${calc.diaDe(rango.desde).slice(8)}/${rango.desde.slice(5, 7)} al ${rango.hasta.slice(8)}/${rango.hasta.slice(5, 7)}): qué gastó cada anuncio, cuántos mensajes, agendas y ventas trajo, y qué sugiere el tablero. Nada se pausa sin mirar antes las ventas.</div>
       <div style="overflow-x:auto"><table class="tabla anuncios">
-        <tr><th>Anuncio</th><th>Gasto</th><th>Mensajes</th><th>Por mensaje</th><th>Leads</th><th>Agendas</th><th>Por agenda</th><th>Ventas</th><th>Por venta</th><th>Retorno</th><th>Sugerencia</th></tr>
+        <tr><th>Anuncio</th><th>Estado</th><th>Gasto</th><th>Mensajes</th><th>Por mensaje</th><th>Agendas</th><th>Por agenda</th><th>Ventas</th><th>Por venta</th><th>Sugerencia</th></tr>
         ${a.anuncios.map((f) => {
           const [txt, cls] = SUGERENCIA[calc.sugerencia(f, umbral)];
-          return `<tr><td><b>${esc(f.nombre)}</b><small>${esc(f.campana ?? '')}</small></td>
-            <td>${usd(f.gasto)}</td><td>${f.conversaciones ? num(f.conversaciones) : f.clics ? `${num(f.clics)} clics` : '0'}</td>
-            <td>${centavos(f.porConversacion ?? div(f.gasto, f.clics))}</td><td>${f.leads}</td>
-            <td>${f.agendas}${f.calificadas ? `<small>${f.calificadas} calif.</small>` : ''}</td><td>${usd(f.porAgenda)}</td>
-            <td>${f.ventas}</td><td>${usd(f.porVenta)}</td><td>${veces(f.retorno)}</td>
+          return `<tr>
+            <td><span class="ad">${miniatura(f)}<span><u>${esc(f.nombre)}</u><small>${esc(f.campana ?? '')}</small></span></span></td>
+            <td><span class="estado-ad ${f.estado === 'activo' ? 'on' : ''}">${esc(f.estado ?? '—')}</span></td>
+            <td>${usd(f.gasto)}</td>
+            <td>${f.conversaciones ? num(f.conversaciones) : f.clics ? `${num(f.clics)} clics` : '0'}</td>
+            <td>${centavos(f.porConversacion ?? div(f.gasto, f.clics))}</td>
+            <td>${f.agendas}</td><td>${usd(f.porAgenda)}</td>
+            <td>${f.ventas}</td><td>${usd(f.porVenta)}</td>
             <td><span class="chip ${cls}">${txt}</span></td></tr>`;
-        }).join('') || '<tr><td colspan="11" class="vacio">Todavía no hay gasto por anuncio este mes.</td></tr>'}
+        }).join('') || '<tr><td colspan="10" class="vacio">Todavía no hay gasto por anuncio en estos 30 días.</td></tr>'}
       </table></div>
       <p class="sub" style="margin:12px 0 0">Sugerencia: <b>Escalar</b> si vendió y devuelve 3x o más. <b>Juntando datos</b> si gastó menos de 2 veces el límite por agenda.
-        <b>Revisar</b> si ya gastó y no trae agendas o cada agenda sale 50% más cara que el límite. Nada se apaga sin mirar antes las ventas.</p>
+        <b>Revisar</b> si ya gastó y no trae agendas o cada agenda sale 50% más cara que el límite.
+        Las agendas y ventas de cada anuncio salen de lo que marca Gabo en cada lead y del link de Calendly (${a.agendasConAnuncio} de ${a.agendas} agendas identificadas).</p>
     </section>
   </div>`;
   graficosAnuncios();
+}
+
+const esteMesTxt = () => (mes === calc.mesDe(new Date().toISOString()) ? 'Mes en curso' : nombreMes(mes));
+
+/** Imagen de referencia del anuncio; si no hay (o no carga), un cuadrado con las iniciales. */
+function miniatura(f) {
+  const ini = esc(f.nombre.replace(/[^\p{L}\p{N} ]/gu, '').split(' ').filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase());
+  const caja = `<span class="mini sin">${ini}</span>`;
+  return f.imagen
+    ? `<img class="mini" src="${esc(f.imagen)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.outerHTML='${caja.replace(/"/g, '&quot;')}'">`
+    : caja;
 }
 
 function graficosAnuncios() {
   const meses = [];
   for (let i = 5; i >= 0; i--) { const m = calc.mesAnterior(mes, i); if (m >= '2026-07') meses.push(m); }
   const s = calc.serie(D, meses);
-  const k = (n) => (n >= 1000 ? '$' + (n / 1000).toFixed(1).replace('.0', '') + 'K' : '$' + Math.round(n));
-  barras($('#c-inv'), meses.map(corto), [s.map((x) => x.gasto)], ['#22d3ee'], ['Inversión'], k,
-    { tip: (i) => `${s[i].agendas} agendas` });
+  const k = (n) => (n >= 1000 ? '$' + (n / 1000).toFixed(1).replace('.0', '').replace('.', ',') + 'K' : '$' + Math.round(n));
+  barrasYLinea($('#c-inv'), meses.map(corto), s.map((x) => x.gasto), s.map((x) => x.agendas), k);
   barras($('#c-cpa2'), meses.map(corto), [s.map((x) => x.costoAgenda ?? 0)], ['#8b5cf6'], ['Por agenda'], (n) => '$' + Math.round(n),
     { umbral: +D.config.sup_costo_agenda });
+}
+
+/** Barras (inversión, eje izquierdo) y línea (agendas, eje derecho). */
+function barrasYLinea(svg, etiquetas, montos, cantidades, f) {
+  const [, , W, H] = svg.getAttribute('viewBox').split(' ').map(Number), pad = { l: 44, r: 32, t: 12, b: 24 };
+  const maxM = tope(Math.max(...montos)), maxC = tope(Math.max(...cantidades, 1));
+  ejes(svg, maxM, H, W, pad, f);
+  for (let i = 0; i <= 4; i++) {
+    const y = H - pad.b - (H - pad.t - pad.b) * i / 4;
+    el('text', { x: W - pad.r + 6, y: y + 4, 'text-anchor': 'start' }, svg).textContent = Math.round(maxC * i / 4);
+  }
+  const gw = (W - pad.l - pad.r) / etiquetas.length, bw = Math.min(26, gw - 16), alto = H - pad.t - pad.b;
+  const pts = [];
+  etiquetas.forEach((lab, i) => {
+    const cx = pad.l + gw * i + gw / 2, h = alto * montos[i] / maxM, y = H - pad.b - h, rr = Math.min(4, h);
+    if (h > 0) el('path', { d: `M${cx - bw / 2},${H - pad.b} V${y + rr} Q${cx - bw / 2},${y} ${cx - bw / 2 + rr},${y} H${cx + bw / 2 - rr} Q${cx + bw / 2},${y} ${cx + bw / 2},${y + rr} V${H - pad.b} Z`, fill: '#22d3ee' }, svg);
+    pts.push([cx, H - pad.b - alto * cantidades[i] / maxC]);
+    el('text', { x: cx, y: H - 6, 'text-anchor': 'middle' }, svg).textContent = lab;
+    tip(el('rect', { x: cx - gw / 2, y: pad.t, width: gw, height: alto, fill: 'transparent' }, svg), `${lab}: ${f(montos[i])} invertidos · ${cantidades[i]} agendas`);
+  });
+  el('path', { d: pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x},${y}`).join(' '), fill: 'none', stroke: '#fb7185', 'stroke-width': 2, 'pointer-events': 'none' }, svg);
+  for (const [x, y] of pts) el('circle', { cx: x, cy: y, r: 4, fill: '#fb7185', stroke: '#171b2e', 'stroke-width': 2, 'pointer-events': 'none' }, svg);
 }
 
 function barraDemo() {
@@ -498,7 +543,7 @@ function barras(svg, etiquetas, series, colores, nombres, f, { umbral = 0, tip: 
   if (umbral > 0) {
     const y = H - pad.b - (H - pad.t - pad.b) * umbral / max;
     el('line', { x1: pad.l, x2: W - pad.r, y1: y, y2: y, stroke: '#f87171', 'stroke-width': 1.5, 'stroke-dasharray': '5 4' }, svg);
-    el('text', { x: W - pad.r, y: y - 5, 'text-anchor': 'end', style: 'fill:#f87171' }, svg).textContent = `límite ${f(umbral)}`;
+    el('text', { x: W - pad.r, y: y - 5, 'text-anchor': 'end', style: 'fill:#f87171' }, svg).textContent = `Umbral ${f(umbral)}`;
   }
 }
 function graficos() {

@@ -61,7 +61,14 @@ const ANUNCIOS = [
   { id: '120210005', nombre: 'Video web · Clase gratis', campana: 'EVG-Web Tráfico', peso: 0.08, tira: 0.08 },
   { id: '120210006', nombre: 'Historia · Pregunta de capital', campana: 'EVG-UY Conversaciones', peso: 0.04, tira: 0.0 },
 ];
-const anuncios = ANUNCIOS.map(({ id, nombre, campana }) => ({ id, nombre, campana, ultimo_gasto: diaISO(hoy) }));
+// Miniaturas inventadas (en la vida real vienen de Meta).
+const miniDemo = (a, b) => 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient></defs>
+  <rect width="80" height="80" fill="url(#g)"/><circle cx="40" cy="34" r="13" fill="#ffffff55"/><rect x="18" y="52" width="44" height="22" rx="11" fill="#ffffff55"/>
+  <path d="M60 10l10 6-10 6z" fill="#fff"/></svg>`);
+const COLORES = [['#f97316', '#be185d'], ['#0ea5e9', '#1e3a8a'], ['#a855f7', '#4c1d95'], ['#22c55e', '#065f46'], ['#eab308', '#9a3412'], ['#ec4899', '#831843']];
+const anuncios = ANUNCIOS.map(({ id, nombre, campana }, i) => ({ id, nombre, campana, ultimo_gasto: diaISO(hoy),
+  imagen: miniDemo(...COLORES[i]), estado: i === 5 ? 'pausado' : 'activo' }));
 function anuncioAlAzar() {
   let x = azar();
   for (const a of ANUNCIOS) { if ((x -= a.tira) < 0) return a.id; }

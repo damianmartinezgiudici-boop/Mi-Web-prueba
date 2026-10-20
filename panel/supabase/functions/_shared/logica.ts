@@ -132,3 +132,14 @@ export function anuncioDesdeMeta(fila: any) {
     },
   };
 }
+
+/** Estado del anuncio en Meta (effective_status) en palabras del panel. */
+export function estadoAnuncio(s?: string | null): string | null {
+  if (!s) return null;
+  if (s === 'ACTIVE') return 'activo';
+  if (s.includes('PAUSED')) return 'pausado';
+  if (s === 'DELETED' || s === 'ARCHIVED') return 'archivado';
+  if (s === 'DISAPPROVED') return 'rechazado';
+  if (s.includes('REVIEW')) return 'en revisión';
+  return s.toLowerCase().replace(/_/g, ' ');
+}

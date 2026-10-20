@@ -87,4 +87,5 @@ anuncio por anuncio (solo campañas `EVG-`) con una sugerencia: Escalar, Mantene
 - **De qué anuncio vino cada agenda:**
   - Anuncios a WhatsApp o Instagram: Gabo elige el anuncio al cargar el lead. La agenda se une al lead por el WhatsApp.
   - Anuncios a la web: el link de Calendly tiene que llevar `utm_content={{ad.id}}`. En Meta se configura en el anuncio, en *Parámetros de URL*.
-- **Para activarla:** pegar `supabase/migrations/0006_anuncios.sql` y después volver a pegar `sincronizar` y `calendly-webhook`, en ese orden.
+- **Imagen y estado de cada anuncio:** también los trae `sincronizar` (migración 0007).
+- **Para activarla:** pegar `supabase/migrations/0006_anuncios.sql` y `0007_anuncios_imagen.sql`, y después volver a pegar `sincronizar` y `calendly-webhook`, en ese orden.
