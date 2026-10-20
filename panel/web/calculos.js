@@ -41,6 +41,11 @@ export function resumenMes(d, mes, ahora = new Date()) {
   const gasto = gastoFilas.length ? suma(gastoFilas, (g) => g.gasto) : Number(hist?.gasto_meta ?? 0);
   const gastoPais = (p) => suma(gastoFilas.filter((g) => g.pais === p), (g) => g.gasto);
 
+  // Meses anteriores al panel: si el histórico tiene el dato, manda él (ya está cerrado y pagado);
+  // si no lo tiene, se usa lo cargado. Las agendas pueden venir de Calendly aunque el mes sea viejo.
+  const usaHistCobros = !!hist && (Number(hist.cobrado) > 0 || !pagos.length);
+  const usaHistVentas = !!hist && (hist.ventas_uy + hist.ventas_ar > 0 || !ventas.length);
+
   // Closer: % de lo que entra de sus ventas. Setter: % de todo lo que entra.
   // Ni el admin ni el socio cobran comisión.
   const pct = Number(d.config.comision_closer_pct) / 100;
@@ -49,7 +54,7 @@ export function resumenMes(d, mes, ahora = new Date()) {
   const esCloser = new Set(d.perfiles.filter((p) => p.rol === 'closer').map((p) => p.id));
   const ventaPorId = new Map(d.ventas.map((v) => [v.id, v]));
   const comisiones = {};
-  for (const p of pagos) {
+  for (const p of usaHistCobros ? [] : pagos) {   // en meses del histórico no se recalculan comisiones
     if (p.estado === 'rechazado') continue;
     const estado = p.estado === 'recibido' ? 'confirmada' : 'aConfirmar';
     const sumar = (id, porc) => { comisiones[id] ??= { confirmada: 0, aConfirmar: 0 }; comisiones[id][estado] += Number(p.neto) * porc; };
@@ -60,10 +65,6 @@ export function resumenMes(d, mes, ahora = new Date()) {
 
   const leads = d.leads.filter((l) => mesDe(l.creado) === mes);
 
-  // Meses anteriores al panel: lo que no se cargó en vivo (cobros, ventas) sale del histórico.
-  // Las agendas pueden venir de Calendly aunque el mes sea viejo, así que se decide dato por dato.
-  const usaHistCobros = !!hist && !pagos.length;
-  const usaHistVentas = !!hist && !ventas.length;
   const historico = usaHistCobros && usaHistVentas && mes < mesDe(ahora.toISOString());
 
   return {
@@ -84,7 +85,7 @@ export function resumenMes(d, mes, ahora = new Date()) {
       ? { UY: hist.ventas_uy, AR: hist.ventas_ar }
       : { UY: ventas.filter((v) => v.pais === 'UY').length, AR: ventas.filter((v) => v.pais === 'AR').length },
     cobrado: usaHistCobros ? Number(hist.cobrado) : suma(recibidos, (p) => p.neto),
-    porConfirmar: suma(informados, (p) => p.neto),
+    porConfirmar: usaHistCobros ? 0 : suma(informados, (p) => p.neto),
     gasto,
     gastoPais: { UY: gastoPais('UY'), AR: gastoPais('AR') },
     costoAgendaCalif: calificadas.length ? gasto / calificadas.length : null,

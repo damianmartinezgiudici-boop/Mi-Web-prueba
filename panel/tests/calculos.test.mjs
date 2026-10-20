@@ -140,3 +140,23 @@ test('setter: 5% de todo lo que entra, la venta la cierre quien la cierre', () =
   delete d.config.comision_setter_pct;
   assert.equal(resumenMes(d, '2026-11').comisiones.gabo, undefined);
 });
+
+test('una seña cargada en un mes del histórico no pisa el cobrado de ese mes ni genera comisión', () => {
+  const d = base();
+  d.config.comision_setter_pct = 5;
+  d.perfiles.push({ id: 'gabo', rol: 'setter' });
+  d.ventas.push({ id: 'v3', fecha: '2026-10-16', precio: 1850, pais: 'AR', closer_id: 'ramiro' });
+  d.pagos.push({ venta_id: 'v3', fecha: '2026-09-30', monto: 100, neto: 100, estado: 'recibido' });
+  d.pagos.push({ venta_id: 'v3', fecha: '2026-10-16', monto: 800, neto: 800, estado: 'recibido' });
+  d.historico.push({ mes: '2026-10-01', cobrado: 0, gasto_meta: 1817.02, agendas: 34, ventas_uy: 0, ventas_ar: 0 });
+  const sep = resumenMes(d, '2026-09', new Date('2026-10-20T12:00:00Z'));
+  assert.equal(sep.cobrado, 33095);
+  assert.equal(sep.ventas, 18);
+  assert.deepEqual(sep.comisiones, {});
+  const oct = resumenMes(d, '2026-10', new Date('2026-10-20T12:00:00Z'));
+  assert.equal(oct.cobrado, 800);
+  assert.equal(oct.ventas, 1);
+  assert.deepEqual(oct.comisiones.ramiro, { confirmada: 80, aConfirmar: 0 });
+  assert.deepEqual(oct.comisiones.gabo, { confirmada: 40, aConfirmar: 0 });
+  assert.equal(saldos(d).find((v) => v.id === 'v3').saldo, 950);
+});
