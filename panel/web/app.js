@@ -496,10 +496,17 @@ function modalPago(ventaId) {
 
 function modalLead(id) {
   const l = id ? D.leads.find((x) => x.id === id) : {};
+  const tel = calc.separarTelefono(l.telefono);
+  let ultimo = 'UY';
+  try { ultimo = localStorage.getItem('pais-lead') || 'UY'; } catch {}
+  const paisSel = tel.pais ?? l.pais ?? ultimo;
   abrir(`<h3>${id ? esc(l.nombre) : 'Nuevo lead'}</h3><div class="sub">Lead de WhatsApp que todavía no agendó. Cuando agende, entra solo desde Calendly.</div>
     <form id="f-lead" style="display:contents"><div class="campos">
       <label>Nombre<input name="nombre" required value="${esc(l.nombre ?? '')}"></label>
-      <label>WhatsApp<input name="telefono" placeholder="+598…" value="${esc(l.telefono ?? '')}"></label></div>
+      <label>WhatsApp<span class="tel">
+        <select name="pais" aria-label="País">${calc.PAISES.map(([c, b, pre]) => `<option value="${c}" ${paisSel === c ? 'selected' : ''}>${b} ${pre}</option>`).join('')}
+          <option value="OTRO" ${paisSel === 'OTRO' ? 'selected' : ''}>Otro</option></select>
+        <input name="telefono" inputmode="tel" placeholder="${paisSel === 'OTRO' ? '+código número' : '99 123 456'}" value="${esc(tel.numero)}"></span></label></div>
       <label>¿Con cuánto capital cuenta?</label>
       <div class="opciones">${Object.entries(CAPITAL_LEAD).map(([k, t]) =>
         `<label class="opcion ${l.capital === k ? 'on' : ''}" style="flex-direction:row;align-items:center"><input type="radio" name="capital" value="${k}" ${l.capital === k ? 'checked' : ''} style="width:auto">${t}</label>`).join('')}</div>
@@ -508,14 +515,15 @@ function modalLead(id) {
       <div class="error"></div>
       <div class="pie"><button type="button" class="btn alt" data-a="cerrar">Cancelar</button><button type="submit" class="btn">Guardar</button></div></form>`);
   $('#f-lead').addEventListener('change', (e) => {
+    if (e.target.name === 'pais') $('#f-lead [name=telefono]').placeholder = e.target.value === 'OTRO' ? '+código número' : '99 123 456';
     if (e.target.name === 'capital') $('#f-lead').querySelectorAll('.opcion').forEach((o) => o.classList.toggle('on', o.contains(e.target)));
   });
   $('#f-lead').onsubmit = (e) => {
     e.preventDefault();
     enviar(e.target, (f) => {
-      const tel = f.telefono.replace(/[^\d+]/g, '');
-      const pais = tel.startsWith('+598') || /^09\d{7}$/.test(tel) ? 'UY' : tel.startsWith('+54') ? 'AR' : tel ? 'OTRO' : null;
-      const lead = { nombre: f.nombre, telefono: f.telefono || null, pais, capital: f.capital || null, estado: f.estado, notas: f.notas || null };
+      try { localStorage.setItem('pais-lead', f.pais); } catch {}
+      const telefono = f.pais === 'OTRO' ? (f.telefono.trim() || null) : calc.armarTelefono(f.pais, f.telefono);
+      const lead = { nombre: f.nombre, telefono, pais: f.pais, capital: f.capital || null, estado: f.estado, notas: f.notas || null };
       return id ? api.actualizarLead(id, lead) : api.crearLead(lead);
     });
   };

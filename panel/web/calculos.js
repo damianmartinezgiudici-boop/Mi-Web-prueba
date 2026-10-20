@@ -155,3 +155,26 @@ export function ganancia(r, costosFijos, socioPct = 0, gastos = []) {
     costoPorVenta: r.ventas ? r.gasto / r.ventas : null,
   };
 }
+
+/** Países para el WhatsApp de los leads: código de país ISO y prefijo telefónico. */
+export const PAISES = [
+  ['UY', '🇺🇾', '+598'], ['AR', '🇦🇷', '+54'], ['ES', '🇪🇸', '+34'], ['MX', '🇲🇽', '+52'], ['US', '🇺🇸', '+1'],
+  ['CL', '🇨🇱', '+56'], ['CO', '🇨🇴', '+57'], ['PE', '🇵🇪', '+51'], ['PY', '🇵🇾', '+595'], ['EC', '🇪🇨', '+593'],
+];
+
+/** Arma el WhatsApp completo: '+598' y '099 123 456' → '+598 99123456'. */
+export function armarTelefono(pais, numero) {
+  let n = String(numero ?? '').replace(/\D/g, '').replace(/^0+/, '');
+  if (!n) return null;
+  if (pais === 'AR' && !n.startsWith('9')) n = '9' + n;   // celulares de Argentina en WhatsApp: +54 9 …
+  const prefijo = PAISES.find(([c]) => c === pais)?.[2] ?? '';
+  return `${prefijo} ${n}`.trim();
+}
+
+/** Lo inverso, para editar un lead: separa el país del resto del número. */
+export function separarTelefono(tel) {
+  const t = String(tel ?? '').replace(/[^\d+]/g, '');
+  // El prefijo más largo primero, para no confundir +595 (Paraguay) con +59…
+  const p = [...PAISES].sort((a, b) => b[2].length - a[2].length).find(([, , pre]) => t.startsWith(pre));
+  return p ? { pais: p[0], numero: t.slice(p[2].length) } : { pais: null, numero: t.replace(/^\+/, '') };
+}

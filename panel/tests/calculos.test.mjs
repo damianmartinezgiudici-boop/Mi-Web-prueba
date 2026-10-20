@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mesDe, mesAnterior, resumenMes, serie, embudoInverso, saldos, ganancia } from '../web/calculos.js';
+import { mesDe, mesAnterior, resumenMes, serie, embudoInverso, saldos, ganancia, armarTelefono, separarTelefono } from '../web/calculos.js';
 
 const base = () => ({
   config: { comision_closer_pct: 10 },
@@ -159,4 +159,14 @@ test('una seña cargada en un mes del histórico no pisa el cobrado de ese mes n
   assert.deepEqual(oct.comisiones.ramiro, { confirmada: 80, aConfirmar: 0 });
   assert.deepEqual(oct.comisiones.gabo, { confirmada: 40, aConfirmar: 0 });
   assert.equal(saldos(d).find((v) => v.id === 'v3').saldo, 950);
+});
+
+test('WhatsApp con código de país automático', () => {
+  assert.equal(armarTelefono('UY', '099 123 456'), '+598 99123456');
+  assert.equal(armarTelefono('AR', '11 2345-6789'), '+54 91123456789');   // agrega el 9 de celular
+  assert.equal(armarTelefono('AR', '9 11 2345 6789'), '+54 91123456789');
+  assert.equal(armarTelefono('UY', '  '), null);
+  assert.deepEqual(separarTelefono('+598 99123456'), { pais: 'UY', numero: '99123456' });
+  assert.deepEqual(separarTelefono('+595 981 123456'), { pais: 'PY', numero: '981123456' });
+  assert.deepEqual(separarTelefono(null), { pais: null, numero: '' });
 });
