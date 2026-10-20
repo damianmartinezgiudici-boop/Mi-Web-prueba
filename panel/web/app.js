@@ -106,7 +106,7 @@ function pintarLogin() {
     } catch (err) {
       const m = String(err.message || '');
       const texto = /signups? not allowed|not found|not allowed for otp/i.test(m)
-        ? 'Ese mail no tiene acceso. Pedile a Damián que te invite.'
+        ? 'Ese mail no tiene acceso todavía. Si Damián ya te invitó, la primera vez tenés que entrar desde el mail de invitación (buscalo también en Spam o Promociones). Si no lo encontrás, pedile que te la reenvíe.'
         : /rate limit|security purposes|after \d+ seconds/i.test(m)
           ? 'Se pidieron muchos links seguidos. Esperá unos minutos y probá de nuevo.'
           : `No se pudo mandar el link (${esc(m)}).`;
