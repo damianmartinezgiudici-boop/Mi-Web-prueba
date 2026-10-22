@@ -266,3 +266,24 @@ export function sugerencia(f, umbral) {
   if (!f.agendas || f.porAgenda > umbral * 1.5) return 'revisar';
   return 'mantener';
 }
+
+// ───────────── Seguimiento ("Lo piensa") ─────────────
+/**
+ * Llamadas que quedaron en "Lo piensa", ordenadas por urgencia. Si la persona ya volvió a agendar
+ * (mismo mail o mismo WhatsApp, en una fecha posterior), se marca y va al final.
+ */
+export function seguimientos(d, hoy = new Date()) {
+  const hoyDia = diaDe(hoy.toISOString());
+  const activas = d.agendas.filter((a) => a.estado === 'activa');
+  const mismo = (a, b) => (a.email && b.email && a.email.toLowerCase() === b.email.toLowerCase())
+    || (ultimos8(a.telefono).length === 8 && ultimos8(a.telefono) === ultimos8(b.telefono));
+  const orden = { vencido: 0, hoy: 1, sin_fecha: 2, pendiente: 3, reagendo: 4 };
+  return activas.filter((a) => a.resultado === 'seguimiento').map((a) => {
+    const nueva = activas.filter((b) => b.id !== a.id && b.inicio > a.inicio && mismo(a, b))
+      .sort((x, y) => x.inicio.localeCompare(y.inicio))[0] ?? null;
+    const vence = a.seguimiento ?? null;
+    const estado = nueva ? 'reagendo' : !vence ? 'sin_fecha' : vence < hoyDia ? 'vencido' : vence === hoyDia ? 'hoy' : 'pendiente';
+    const dias = Math.round((Date.parse(hoyDia) - Date.parse(diaDe(a.inicio))) / 86400000);
+    return { ...a, vence, estado, reagendo: nueva, diasDesdeLlamada: dias };
+  }).sort((x, y) => orden[x.estado] - orden[y.estado] || String(x.vence ?? x.inicio).localeCompare(String(y.vence ?? y.inicio)));
+}

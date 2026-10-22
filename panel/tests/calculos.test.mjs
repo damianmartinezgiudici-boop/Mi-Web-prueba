@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mesDe, mesAnterior, resumenMes, serie, embudoInverso, saldos, ganancia, armarTelefono, separarTelefono, resumenAnuncios, sugerencia, ultimos30 } from '../web/calculos.js';
+import { mesDe, mesAnterior, resumenMes, serie, embudoInverso, saldos, ganancia, armarTelefono, separarTelefono, resumenAnuncios, sugerencia, ultimos30, seguimientos } from '../web/calculos.js';
 
 const base = () => ({
   config: { comision_closer_pct: 10 },
@@ -209,4 +209,21 @@ test('anuncios: últimos 30 días', () => {
                     { fecha: '2026-11-10', anuncio_id: '111', gasto: 5, conversaciones: 1, clics: 0 },
                     { fecha: '2026-09-01', anuncio_id: '111', gasto: 99, conversaciones: 1, clics: 0 }];
   assert.equal(resumenAnuncios(d, { desde: '2026-10-16', hasta: '2026-11-14' }).anuncios[0].gasto, 15);
+});
+
+test('seguimiento: los que lo piensan, por urgencia, y los que ya reagendaron al final', () => {
+  const d = base();
+  d.agendas = [
+    { id: 's1', estado: 'activa', inicio: '2026-11-01T15:00:00Z', resultado: 'seguimiento', seguimiento: '2026-11-08', email: 'a@x.com' },
+    { id: 's2', estado: 'activa', inicio: '2026-11-03T15:00:00Z', resultado: 'seguimiento', seguimiento: '2026-11-10', telefono: '+598 99 111 222' },
+    { id: 's3', estado: 'activa', inicio: '2026-11-04T15:00:00Z', resultado: 'seguimiento', seguimiento: '2026-11-20' },
+    { id: 's4', estado: 'activa', inicio: '2026-11-05T15:00:00Z', resultado: 'seguimiento', seguimiento: null },
+    { id: 's5', estado: 'activa', inicio: '2026-11-02T15:00:00Z', resultado: 'seguimiento', seguimiento: '2026-11-05', email: 'B@x.com' },
+    { id: 'n5', estado: 'activa', inicio: '2026-11-12T15:00:00Z', resultado: 'pendiente', email: 'b@x.com' },   // s5 volvió a agendar
+    { id: 'x', estado: 'activa', inicio: '2026-11-02T15:00:00Z', resultado: 'no_compro' },
+  ];
+  const s = seguimientos(d, new Date('2026-11-10T15:00:00Z'));
+  assert.deepEqual(s.map((x) => [x.id, x.estado]), [['s1', 'vencido'], ['s2', 'hoy'], ['s4', 'sin_fecha'], ['s3', 'pendiente'], ['s5', 'reagendo']]);
+  assert.equal(s[0].diasDesdeLlamada, 9);
+  assert.equal(s[4].reagendo.id, 'n5');
 });

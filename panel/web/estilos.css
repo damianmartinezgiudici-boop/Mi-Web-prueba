@@ -55,6 +55,7 @@ header{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:20p
 .chip.bad{background:rgba(239,68,68,.15);color:#fca5a5}
 .chip.neutro{background:var(--surface-2);color:var(--ink-2)}
 .badge{background:#ef4444;color:#fff;border-radius:99px;font-size:11px;padding:1px 7px;font-weight:700}
+.badge.gris{background:var(--ink-3)}
 
 .main{grid-template-columns:1.4fr 1fr;margin-top:16px}
 .dos{grid-template-columns:1.4fr 1fr;margin-top:16px;align-items:start}

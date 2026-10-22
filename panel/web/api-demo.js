@@ -101,7 +101,8 @@ for (let d = new Date(inicioMes); d.getMonth() === inicioMes.getMonth(); d.setDa
     }
     const a = { id: uid(), nombre: elegir(NOMBRES), telefono: pais === 'UY' ? '+598 9' : '+54 9 11', pais, capital, calificada, nivel,
       inicio: inicio.toISOString(), estado: 'activa', resultado, closer_id: resultado === 'pendiente' ? null : 'ramiro', notas: '',
-      anuncio_id: anuncioAlAzar() };
+      anuncio_id: anuncioAlAzar(),
+      seguimiento: resultado === 'seguimiento' ? diaISO(new Date(inicio.getTime() + Math.floor(azar() * 9) * 86400000)) : null };
     agendas.push(a);
     if (resultado === 'compro') {
       const oferta = elegir(ofertas);

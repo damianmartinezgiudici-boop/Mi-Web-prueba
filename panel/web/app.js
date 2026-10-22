@@ -58,6 +58,7 @@ function hora(iso) {
   return `${dia.slice(8)}/${dia.slice(5, 7)} ${h}`;
 }
 const fecha = (f) => `${f.slice(8, 10)}/${f.slice(5, 7)}`;
+const enDias = (n) => new Date(Date.now() + n * 86400000).toLocaleDateString('en-CA', { timeZone: calc.ZONA });
 
 function aviso(texto) {
   const a = $('#aviso');
@@ -405,15 +406,19 @@ function tarjetaLlamadas(r) {
   const desde = new Date(ahora.getTime() - 7 * 86400000);
   const paraCargar = D.agendas.filter((a) => a.estado === 'activa' && a.resultado === 'pendiente' && new Date(a.inicio) < ahora && new Date(a.inicio) >= desde)
     .sort((x, y) => y.inicio.localeCompare(x.inicio));
-  const lista = tabLlamadas === 'cargar' ? paraCargar : proximas;
+  const seg = calc.seguimientos(D);
+  const urgentes = seg.filter((x) => x.estado === 'vencido' || x.estado === 'hoy').length;
+  const lista = tabLlamadas === 'cargar' ? paraCargar : tabLlamadas === 'seguimiento' ? seg : proximas;
   return `<div class="card">
     <h2>Llamadas</h2><div class="sub">Las agendas entran solas desde Calendly${vende() ? ' · tocá una para cargar el resultado' : ''}</div>
     <div class="tabs">
       <button class="tab ${tabLlamadas === 'cargar' ? 'on' : ''}" data-a="tab-llamadas" data-k="cargar">Para cargar ${paraCargar.length ? `<span class="badge">${paraCargar.length}</span>` : ''}</button>
+      <button class="tab ${tabLlamadas === 'seguimiento' ? 'on' : ''}" data-a="tab-llamadas" data-k="seguimiento">Seguimiento ${seg.length ? `<span class="badge ${urgentes ? '' : 'gris'}">${seg.length}</span>` : ''}</button>
       <button class="tab ${tabLlamadas === 'proximas' ? 'on' : ''}" data-a="tab-llamadas" data-k="proximas">Próximas</button>
     </div>
-    <div class="list">${lista.length ? lista.slice(0, 8).map(filaAgenda).join('') :
-      `<div class="vacio">${tabLlamadas === 'cargar' ? 'Todo al día: no hay llamadas sin resultado 🙌' : 'No hay llamadas agendadas.'}</div>`}</div>
+    ${tabLlamadas === 'seguimiento' && seg.length ? `<div class="sub" style="margin:-4px 0 10px">Los que quedaron en “Lo piensa”. Primero los que hay que contactar hoy o ya se pasaron. Tocá uno para cargar qué pasó.</div>` : ''}
+    <div class="list">${lista.length ? (tabLlamadas === 'seguimiento' ? lista.map(filaSeguimiento) : lista.slice(0, 8).map(filaAgenda)).join('') :
+      `<div class="vacio">${tabLlamadas === 'cargar' ? 'Todo al día: no hay llamadas sin resultado 🙌' : tabLlamadas === 'seguimiento' ? 'Nadie en seguimiento: cuando una llamada quede en “Lo piensa”, aparece acá.' : 'No hay llamadas agendadas.'}</div>`}</div>
   </div>`;
 }
 
@@ -424,6 +429,22 @@ function filaAgenda(a) {
     <span class="who">${esc(a.nombre)}<small>${a.resultado !== 'pendiente' ? `${RESULTADOS[a.resultado][0]} · ` : ''}${esc(a.capital ?? 'Capital sin dato')}</small></span>
     ${a.pais ? `<span class="flag">${esc(a.pais)}</span>` : ''}
     <span class="chip ${NIVEL[nivelDe(a)][1]}" title="${esc(a.capital)}">${NIVEL[nivelDe(a)][0]}</span>
+  </${tag}>`;
+}
+
+const SEGUIMIENTO = {
+  vencido: ['Atrasado', 'bad'], hoy: ['Hoy', 'warn'], sin_fecha: ['Sin fecha', 'warn'], pendiente: ['', 'neutro'], reagendo: ['Reagendó', 'good'],
+};
+function filaSeguimiento(a) {
+  const tag = vende() ? 'button' : 'div';
+  const [txt, cls] = SEGUIMIENTO[a.estado];
+  const cuando = a.estado === 'reagendo' ? `Reagendó · ${hora(a.reagendo.inicio)}`
+    : a.estado === 'vencido' ? `Atrasado · era el ${fecha(a.vence)}`
+    : a.estado === 'pendiente' ? `Contactar el ${fecha(a.vence)}` : txt;
+  return `<${tag} class="row" ${vende() ? `data-a="resultado" data-id="${a.id}"` : ''}>
+    <span class="t">${fecha(calc.diaDe(a.inicio))}</span>
+    <span class="who">${esc(a.nombre)}<small>${a.diasDesdeLlamada === 0 ? 'Llamada de hoy' : a.diasDesdeLlamada === 1 ? 'Llamada de ayer' : `Llamada hace ${a.diasDesdeLlamada} días`}${a.notas ? ` · ${esc(a.notas)}` : ''}</small></span>
+    <span class="chip ${cls}">${cuando}</span>
   </${tag}>`;
 }
 
@@ -597,7 +618,8 @@ function modalResultado(id) {
     <div class="sub">${hora(a.inicio)} · ${esc(a.pais ?? '')} · Capital: ${esc(a.capital ?? 'sin dato')}${a.telefono ? ` · ${esc(a.telefono)}` : ''}</div>
     <div class="opciones">${Object.entries(RESULTADOS).map(([k, [t, s]]) =>
       `<button class="opcion ${a.resultado === k ? 'on' : ''}" data-a="elegir-resultado" data-id="${a.id}" data-k="${k}">${t}<small>${s}</small></button>`).join('')}</div>
-    <label>Notas (opcional)<textarea id="r-notas" rows="2">${esc(a.notas ?? '')}</textarea></label>
+    ${'seguimiento' in a ? `<label>Si lo piensa: ¿cuándo volver a contactarlo?<input id="r-seguimiento" type="date" value="${a.seguimiento ?? enDias(3)}"></label>` : ''}
+    <label>Notas (opcional)<textarea id="r-notas" rows="2" placeholder="Ej: lo habla con la pareja, pidió ver casos de Argentina">${esc(a.notas ?? '')}</textarea></label>
     <div class="error"></div>
     <div class="pie">${esAdmin() ? `<button class="btn no chico" data-a="excluir" data-id="${a.id}" style="margin-right:auto">Excluir (prueba)</button>` : ''}<button class="btn alt" data-a="cerrar">Cancelar</button></div>`);
 }
@@ -813,7 +835,13 @@ document.addEventListener('click', async (e) => {
       case 'elegir-resultado': {
         const notas = $('#r-notas').value || null;
         if (k === 'compro') modalVenta(id);   // la agenda pasa a "compró" cuando se guarda la venta
-        else { await api.guardarResultado(id, { resultado: k, notas, closer_id: D.perfil.id }); cerrar(); await recargar(); aviso('Resultado guardado'); }
+        else {
+          const cambios = { resultado: k, notas, closer_id: D.perfil.id };
+          const seg = $('#r-seguimiento');
+          if (seg) cambios.seguimiento = k === 'seguimiento' ? seg.value || null : null;
+          await api.guardarResultado(id, cambios); cerrar(); await recargar();
+          aviso(k === 'seguimiento' ? 'Queda en Seguimiento' : 'Resultado guardado');
+        }
         break;
       }
       case 'excluir':
