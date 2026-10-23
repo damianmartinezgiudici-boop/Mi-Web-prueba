@@ -455,7 +455,7 @@ function tarjetaEquipo(r, e) {
     ${activos.map((p) => {
       const leadsFila = `<div class="row"><span class="who">${esc(p.nombre)} · leads calificados</span><b>${D.leads.filter((l) => l.setter_id === p.id && calc.mesDe(l.creado) === mes && ['calificado', 'agendado'].includes(l.estado)).length}</b></div>`;
       const c = r.comisiones[p.id] ?? { confirmada: 0, aConfirmar: 0 };
-      const comisionFila = (pctTxt, base) => `<div class="row"><span class="who">${esc(p.nombre)} · comisión<small>${pctTxt}% de ${base}${c.aConfirmar ? ` · +${usd(c.aConfirmar)} por confirmar` : ''}</small></span><b>${usd(c.confirmada)}</b></div>`;
+      const comisionFila = (pctTxt, base) => `<div class="row"><span class="who">${esc(p.nombre)} · comisión<small>${pctTxt}% de ${base}${c.aConfirmar ? ` · ${usd(c.aConfirmar)} más en espera: se suman cuando Damián confirme los pagos pendientes` : ''}</small></span><b>${usd(c.confirmada)}</b></div>`;
       if (p.rol === 'setter') return leadsFila + (Number(D.config.comision_setter_pct) ? comisionFila(Number(D.config.comision_setter_pct), 'todo lo que entra') : '');
       if (p.rol === 'socio') return `<div class="row"><span class="who">${esc(p.nombre)} · ventas</span><b>${ventasDe(p.id)}</b></div>${leadsFila}`;
       return `<div class="row"><span class="who">${esc(p.nombre)} · ventas</span><b>${ventasDe(p.id)}${e ? ` / ${e.ventas}` : ''}</b></div>
