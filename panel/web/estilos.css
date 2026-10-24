@@ -56,6 +56,9 @@ header{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:20p
 .chip.neutro{background:var(--surface-2);color:var(--ink-2)}
 .badge{background:#ef4444;color:#fff;border-radius:99px;font-size:11px;padding:1px 7px;font-weight:700}
 .badge.gris{background:var(--ink-3)}
+.historial{background:var(--surface-2);border-radius:12px;padding:10px 14px;font-size:13px;color:var(--ink-2);max-height:150px;overflow:auto}
+.historial b{display:block;color:var(--ink);font-size:12px;margin-bottom:4px}
+.historial p{margin:2px 0}
 
 .main{grid-template-columns:1.4fr 1fr;margin-top:16px}
 .dos{grid-template-columns:1.4fr 1fr;margin-top:16px;align-items:start}

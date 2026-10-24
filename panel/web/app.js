@@ -443,7 +443,7 @@ function filaSeguimiento(a) {
     : a.estado === 'pendiente' ? `Contactar el ${fecha(a.vence)}` : txt;
   return `<${tag} class="row" ${vende() ? `data-a="resultado" data-id="${a.id}"` : ''}>
     <span class="t">${fecha(calc.diaDe(a.inicio))}</span>
-    <span class="who">${esc(a.nombre)}<small>${a.diasDesdeLlamada === 0 ? 'Llamada de hoy' : a.diasDesdeLlamada === 1 ? 'Llamada de ayer' : `Llamada hace ${a.diasDesdeLlamada} días`}${a.notas ? ` · ${esc(a.notas)}` : ''}</small></span>
+    <span class="who">${esc(a.nombre)}<small>${a.diasDesdeLlamada === 0 ? 'Llamada de hoy' : a.diasDesdeLlamada === 1 ? 'Llamada de ayer' : `Llamada hace ${a.diasDesdeLlamada} días`}${a.notas ? ` · ${esc(a.notas.split('\n').at(-1))}` : ''}</small></span>
     <span class="chip ${cls}">${cuando}</span>
   </${tag}>`;
 }
@@ -614,14 +614,28 @@ async function enviar(form, accion) {
 
 function modalResultado(id) {
   const a = D.agendas.find((x) => x.id === id);
+  const enSeguimiento = a.resultado === 'seguimiento';
+  const wa = String(a.telefono ?? '').replace(/\D/g, '');
   abrir(`<h3>${esc(a.nombre)}</h3>
     <div class="sub">${hora(a.inicio)} · ${esc(a.pais ?? '')} · Capital: ${esc(a.capital ?? 'sin dato')}${a.telefono ? ` · ${esc(a.telefono)}` : ''}</div>
+    ${wa.length >= 8 ? `<a class="btn alt chico" style="align-self:flex-start;text-decoration:none" href="https://wa.me/${wa}" target="_blank" rel="noopener">💬 Escribirle por WhatsApp</a>` : ''}
+    ${enSeguimiento && a.notas ? `<div class="historial"><b>Historial</b>${esc(a.notas).split('\n').map((l) => `<p>${l}</p>`).join('')}</div>` : ''}
     <div class="opciones">${Object.entries(RESULTADOS).map(([k, [t, s]]) =>
       `<button class="opcion ${a.resultado === k ? 'on' : ''}" data-a="elegir-resultado" data-id="${a.id}" data-k="${k}">${t}<small>${s}</small></button>`).join('')}</div>
-    ${'seguimiento' in a ? `<label>Si lo piensa: ¿cuándo volver a contactarlo?<input id="r-seguimiento" type="date" value="${a.seguimiento ?? enDias(3)}"></label>` : ''}
-    <label>Notas (opcional)<textarea id="r-notas" rows="2" placeholder="Ej: lo habla con la pareja, pidió ver casos de Argentina">${esc(a.notas ?? '')}</textarea></label>
+    ${'seguimiento' in a ? `<label>Si lo piensa: ¿cuándo volver a contactarlo?<input id="r-seguimiento" type="date" value="${a.seguimiento && a.seguimiento > hoyISO() ? a.seguimiento : enDias(3)}"></label>` : ''}
+    ${enSeguimiento
+      ? `<label>¿Qué pasó en este contacto?<textarea id="r-notas" rows="2" placeholder="Ej: no contestó, le mandé audio · dice que cobra el 5 y arranca"></textarea></label>`
+      : `<label>Notas (opcional)<textarea id="r-notas" rows="2" placeholder="Ej: lo habla con la pareja, pidió ver casos de Argentina">${esc(a.notas ?? '')}</textarea></label>`}
     <div class="error"></div>
     <div class="pie">${esAdmin() ? `<button class="btn no chico" data-a="excluir" data-id="${a.id}" style="margin-right:auto">Excluir (prueba)</button>` : ''}<button class="btn alt" data-a="cerrar">Cancelar</button></div>`);
+}
+
+/** Notas al guardar: en seguimiento, el contacto nuevo se suma al historial con su fecha; si no, reemplaza. */
+function notasNuevas(a, texto) {
+  if (a.resultado !== 'seguimiento') return texto || null;
+  if (!texto) return a.notas ?? null;
+  const linea = `${fecha(hoyISO())}: ${texto}`;
+  return a.notas ? `${a.notas}\n${linea}` : linea;
 }
 
 function modalVenta(agendaId) {
@@ -833,7 +847,7 @@ document.addEventListener('click', async (e) => {
       case 'pago': modalPago(id); break;
       case 'resultado': modalResultado(id); break;
       case 'elegir-resultado': {
-        const notas = $('#r-notas').value || null;
+        const notas = notasNuevas(D.agendas.find((x) => x.id === id), $('#r-notas').value.trim());
         if (k === 'compro') modalVenta(id);   // la agenda pasa a "compró" cuando se guarda la venta
         else {
           const cambios = { resultado: k, notas, closer_id: D.perfil.id };
